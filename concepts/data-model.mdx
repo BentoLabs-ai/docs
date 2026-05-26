@@ -1,0 +1,98 @@
+---
+title: "Data model"
+description: "Trajectories, spans, attributes, sessions. The four primitives that drive every chart in the dashboard."
+icon: "diagram-project"
+---
+
+The BentoLabs dashboard (conversation timelines, cost breakdowns, user analytics, agent behavior views) is built from four primitives the SDK emits as you run your app. Once you know what each one represents, you can predict how any chart in the product is computed.
+
+## The four primitives
+
+<CardGroup cols={2}>
+  <Card title="Trajectory" icon="route" href="/concepts/trajectories">
+    One run of your agent. The root span of a trace.
+
+    `bento.begin(...)` · `@bento.interaction`
+  </Card>
+  <Card title="Span" icon="bars-staggered">
+    One step inside a trajectory. An LLM call, a tool call, or anything you choose to time.
+
+    `bento.track_ai(...)` · `bento.tool_span(...)` · `@bento.tool`
+  </Card>
+  <Card title="Attribute" icon="table" href="/concepts/attributes">
+    A typed key/value pair on a span. Becomes a column or filter in the dashboard.
+
+    Kwargs on the calls above, plus `properties={...}`
+  </Card>
+  <Card title="Session" icon="users-line" href="/concepts/sessions">
+    All trajectories that share a `convo_id`. A server-side grouping, not an SDK object.
+
+    Pass the same `convo_id` on every call.
+  </Card>
+</CardGroup>
+
+<Note>
+  Under the hood these are OpenTelemetry spans with [OpenInference](https://github.com/Arize-ai/openinference) and [GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) semantic conventions. You can ignore that unless you're wiring BentoLabs into an existing OTel pipeline.
+</Note>
+
+## How they nest
+
+```text
+Session                  ← grouped server-side by convo_id
+├── Trajectory A         ← one agent run, opened by bento.begin
+│   ├── LLM span         ← bento.track_ai
+│   ├── Tool span        ← bento.tool_span or @bento.tool
+│   └── LLM span         ← bento.track_ai
+└── Trajectory B         ← next turn, same convo_id
+    └── ...
+```
+
+A bare `track_ai` call with no surrounding `begin` is its own one-span trajectory. You don't have to open a trajectory to record an LLM call.
+
+## What gets emitted
+
+Every call produces one OTel span. The attributes below land in dashboard columns. Everything else lives in the per-span attributes JSON.
+
+| Concept       | OTel attribute            | Dashboard column |
+|---------------|---------------------------|------------------|
+| Span name     | `span.name`               | Span name        |
+| User          | `gen_ai.user.id`          | User             |
+| Conversation  | `gen_ai.conversation.id`  | Session          |
+| Model         | `gen_ai.request.model`    | Model            |
+| Provider      | `gen_ai.system`           | Provider         |
+| Input         | `input.value`             | Input            |
+| Output        | `output.value`            | Output           |
+| Span kind     | `openinference.span.kind` | Kind             |
+| Custom        | (your `properties` keys)  | Attributes JSON  |
+
+See [Attributes](/concepts/attributes) for the per-kwarg breakdown.
+
+## Span kinds
+
+The `openinference.span.kind` attribute drives icons, colors, and filters in the dashboard.
+
+| Kind        | Emitted by                                             | Meaning |
+|-------------|--------------------------------------------------------|---------|
+| _(default)_ | `bento.track_ai`                                       | A model call. Carries `gen_ai.*` attributes. |
+| `tool`      | `bento.tool_span`, `@bento.tool`, `interaction.tool_span` | A tool or function call. |
+
+OpenInference defines other kinds (`retriever`, `embedding`, `agent`, `chain`). Set them by passing `openinference.span.kind` in `properties`.
+
+## Sessions are server-side
+
+There is no `Session` object in the SDK. A session is whatever trajectories share the same `convo_id` string.
+
+```python
+bento.track_ai(event="turn_1", convo_id="chat_99", user_id="user_42", ...)
+bento.track_ai(event="turn_2", convo_id="chat_99", user_id="user_42", ...)
+```
+
+Both turns land under one session in the dashboard. `user_id` works the same way: a free-form string passed on every call. We do not store profile data.
+
+See [Sessions and users](/concepts/sessions) for ID-choosing rules.
+
+## Already on OpenTelemetry?
+
+<Tip>
+  Drop in `BentoLabsSpanProcessor` and skip the analytics layer entirely. Any span you emit with OpenInference or GenAI semantic conventions lands in the right dashboard column. See [OTel transport](/python/otel-transport).
+</Tip>

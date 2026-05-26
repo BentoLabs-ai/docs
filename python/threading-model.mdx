@@ -1,0 +1,135 @@
+---
+title: "Threading model"
+description: "How the SDK ships telemetry without blocking your hot path. ContextVar isolation, daemon worker, fork safety, async behavior."
+icon: "microchip"
+---
+
+The SDK keeps user code on a tight latency budget by running all network I/O on a background daemon thread. Most users don't need to know any of this. Read it when you're debugging weird parenting, fork issues, or asyncio behavior.
+
+## The mental model
+
+```
+T_caller (your code)                 T_worker (daemon thread)
+─────────────────────                ─────────────────────────
+bento.track_ai(...)                  while not _shutdown:
+  build attrs       ~us                Event.wait(5s)
+  start span        ~us                pop spans from queue
+  end span          ~us                json.dumps(batch)
+  queue.appendleft  ~ns                urlopen(POST /traces)
+return        (~10us total)            (network bound)
+```
+
+T_caller spends roughly **10 microseconds** per `track_ai` call. The HTTP POST happens on T_worker, on a separate OS thread that releases the GIL during socket I/O.
+
+## What runs where
+
+| Step | Thread | Operation |
+|---|---|---|
+| `_build_attrs(...)` | T_caller | dict assembly, `json.dumps` for `input`/`output` |
+| `tracer.start_span(...)` | T_caller | allocate Span, on_start hooks |
+| `span.end()` | T_caller | sampling check, `deque.appendleft`, optional `Event.set()` |
+| (caller returns) | T_caller | continues with its own work |
+| `Event.wait(5s)` returns | T_worker | timer or queue-threshold |
+| `_encode_export_request` | T_worker | group by resource and scope |
+| `json.dumps` of batch | T_worker | serialize |
+| `urlopen(POST /v1/traces)` | T_worker | 10s timeout, releases GIL |
+
+The 10-second `urlopen` timeout blocks **the worker thread only**. T_caller went on its way microseconds ago.
+
+## When the worker exports
+
+Four conditions wake T_worker:
+
+1. **Timer elapsed** (every 5 seconds by default).
+2. **Queue past threshold.** When the queue exceeds 512 spans, T_caller calls `Event.set()` to wake the worker immediately.
+3. **`bento.flush()`.** Synchronous export on the caller's thread, holds `_export_lock` so it can't race the worker.
+4. **`bento.shutdown()`.** Drains the entire queue one last time on the way out.
+
+The queue is a bounded `collections.deque(maxlen=2048)`. Past 2048, the oldest span is dropped and a WARNING is logged. The deque's `append`/`pop` are atomic at the C level, so the producer takes no Python-level lock.
+
+## Async and context
+
+`bento.begin()` stores the trajectory's OTel context in a `ContextVar`. ContextVars are:
+
+- **Per-thread** for synchronous code
+- **Per-task** for asyncio (because `asyncio.create_task` copies the current `Context`)
+
+This means two concurrent FastAPI handlers share the event loop thread but get independent trajectory contexts. `track_ai` inside handler A doesn't bleed into handler B's trajectory.
+
+<Warning>
+  **Threads and `concurrent.futures` don't inherit the ContextVar** unless you copy the context explicitly:
+
+  ```python
+  import contextvars
+  from concurrent.futures import ThreadPoolExecutor
+
+  with bento.begin(event="user_turn") as interaction:
+      ctx = contextvars.copy_context()
+      with ThreadPoolExecutor() as ex:
+          ex.submit(ctx.run, do_work)  # do_work's track_ai calls parent to the trajectory
+  ```
+
+  Without `ctx.run`, the worker thread's `track_ai` becomes a root span.
+</Warning>
+
+## Async behavior
+
+The `on_end → emit` code path is entirely synchronous. No `asyncio` anywhere on T_caller. A FastAPI handler that calls `track_ai` 10 times pays 10 × 10us = 100us total on the event loop thread, awaits nothing, and doesn't yield control.
+
+The HTTP POST happens on T_worker, off the loop. During the POST, T_worker is blocked in a C-level `recv` syscall that releases the GIL, so the event loop keeps running other tasks.
+
+## Fork safety
+
+`uvicorn --workers N`, `multiprocessing.Pool`, and any other `fork()`-based parallelism just work. OTel registers an `os.register_at_fork` hook that rebuilds the worker thread, lock, event, and queue in each child process. There's also a PID-mismatch guard inside `emit` as defense-in-depth.
+
+No special handling needed in user code.
+
+## Shutdown semantics
+
+| Scenario | What happens |
+|---|---|
+| Long-running service exits cleanly | `atexit` fires `TracerProvider.shutdown` automatically. Queue drains. |
+| `os._exit()` or `SIGKILL` | `atexit` is bypassed. **Queue is lost.** Call `bento.flush()` before hard-exiting. |
+| Lambda timeout | Same as hard exit. Call `bento.flush()` in your handler before returning. |
+| `bento.shutdown()` mid-process | `_shutdown = True`, worker wakes, drains queue, joins with 30s timeout, then process continues. Subsequent `track_ai` calls re-init lazily. |
+| In-flight export when shutdown starts | Holds `_export_lock`. HTTP call runs to completion (or its 10s timeout). Not interrupted. |
+
+## Verify on your machine
+
+See the worker thread:
+
+```python
+import threading
+import bentolabs_sdk.analytics as bento
+bento.init()
+print([t.name for t in threading.enumerate()])
+# ['MainThread', 'OtelBatchSpanRecordProcessor']
+```
+
+Measure per-call cost:
+
+```python
+import time
+import bentolabs_sdk.analytics as bento
+bento.init()
+t = time.perf_counter()
+for _ in range(10_000):
+    bento.track_ai(event="bench", user_id="u", input="hi")
+print(f"{(time.perf_counter() - t) * 1000:.0f}ms for 10k calls")
+# ~100ms (around 10us per call)
+```
+
+The HTTP POSTs all happen on T_worker after this loop finishes. Add `bento.flush()` if you want to wait for them.
+
+## Why this design
+
+Every production tracing SDK (Sentry, Datadog, Langfuse, Logfire) converges on the same pattern: single daemon worker, bounded in-memory queue, synchronous HTTP from the worker, drop-on-full backpressure, flush-on-shutdown API. The alternatives all lose:
+
+- **HTTP on T_caller** adds 50ms to 500ms per traced operation. Latency-sensitive paths die.
+- **asyncio on the host loop** forces sync hosts to adopt async and risks loop scheduling interference.
+- **Subprocess + IPC** adds operational complexity for a deploy-time benefit (the Datadog Agent pattern).
+- **Thread pool** is moot under the GIL for Python-level work.
+- **Unbounded queue** OOMs the host under load. Telemetry shouldn't kill the thing you're observing.
+- **Blocking on full** couples host latency to ingest latency. Telemetry becomes a back-pressure source on the request path.
+
+Drop-on-full is the only failure mode that's memory-bounded, latency-bounded, observable when it drops, and decoupled from the host loop.

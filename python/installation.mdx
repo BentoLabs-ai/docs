@@ -1,0 +1,57 @@
+---
+title: "Installation"
+description: "Install the BentoLabs Python SDK and verify it sends events."
+icon: "download"
+---
+
+import InstallPython from "/snippets/install-python.mdx";
+import ApiKeySetup from "/snippets/api-key-setup.mdx";
+
+## Requirements
+
+- Python 3.10 or higher
+
+## Install
+
+<InstallPython />
+
+The analytics layer (`bentolabs_sdk.analytics`) brings its own OpenTelemetry dependencies. You don't need to install `opentelemetry-api` or `opentelemetry-sdk` separately unless you want to use the [lower-level OTel transport](/python/otel-transport).
+
+## Set your API key
+
+<ApiKeySetup />
+
+<Tip>
+  Prefer setting the key via environment variable in production. For local development or notebooks, pass it explicitly via `bento.init(api_key=...)`.
+</Tip>
+
+## Verify your install
+
+```python
+import bentolabs_sdk.analytics as bento
+
+bento.track_ai(
+    event="hello_world",
+    user_id="test_user",
+    input="ping",
+    output="pong",
+    model="claude-3-5-sonnet-20241022",
+    provider="anthropic",
+    convo_id="conv_test",
+)
+
+bento.flush()
+```
+
+Run the script, then check your dashboard. You should see one trace within seconds.
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    Env vars, `init()`, and lifecycle hooks.
+  </Card>
+  <Card title="track_ai" icon="paper-plane" href="/python/track-ai">
+    The full event API.
+  </Card>
+</CardGroup>

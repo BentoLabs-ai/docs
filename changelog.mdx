@@ -1,0 +1,40 @@
+---
+title: "Changelog"
+description: "Release notes for the BentoLabs SDKs."
+icon: "clock-rotate-left"
+---
+
+Release notes for [`bentolabs-sdk`](/python/installation). Versions follow [SemVer](https://semver.org/).
+
+<Update label="v0.2.0" description="Python SDK" tags={["Python"]}>
+
+### Added
+
+- `bentolabs_sdk.analytics` module with `init`, `track_ai`, `begin`, `flush`, and `shutdown`. You no longer need to set up an OTel tracer yourself.
+- `bento.begin(...)` for trajectories (multi-step interaction spans). Works as a context manager or imperatively with `t.finish()`. Out-of-order `finish()` calls raise `RuntimeError`.
+- `@bento.interaction` and `@bento.tool` decorators. Both work on sync and async functions.
+- `@bento.tool` records bound arguments as `input.value` and the return value as `output.value` automatically.
+- `bento.tool_span(...)` for standalone tool spans, and `interaction.tool_span(...)` for tool spans inside an open trajectory. Both set `openinference.span.kind="tool"`.
+
+### Improved
+
+- Property types are preserved on the wire. `int`, `float`, `bool`, `str`, and homogeneous lists keep their type. Dicts and mixed lists fall back to JSON strings.
+
+### Changed
+
+- `track_ai` and `begin` now detach from the caller's active OTel context. BentoLabs spans will not get attached to FastAPI, Django, or other framework traces.
+
+</Update>
+
+<Update label="v0.1.0" description="Python SDK" tags={["Python"]}>
+
+Initial release.
+
+### Added
+
+- `BentoLabsSpanProcessor`: OTel `SpanProcessor` that ships spans to BentoLabs.
+- `BentoLabsTraceExporter`: OTel `SpanExporter` for batch or custom processor setups.
+- `resolve_options`: resolves API key and base URL from constructor args, env vars (`BENTOLABS_API_KEY`, `BENTOLABS_BASE_URL`), or defaults.
+- `BentoAuthError` with a `code` field. Codes: `missing_api_key`, `invalid_api_key_format`, `already_initialized`.
+
+</Update>

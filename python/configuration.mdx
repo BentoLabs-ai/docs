@@ -1,0 +1,78 @@
+---
+title: "Configuration"
+description: "Environment variables, init(), and credential rotation."
+icon: "gear"
+---
+
+## Environment variables
+
+| Variable | Default | Notes |
+|---|---|---|
+| `BENTOLABS_API_KEY` | (required) | From [platform.bentolabs.ai](https://platform.bentolabs.ai). Format `bl_pk_...` (validated up front). |
+| `BENTOLABS_BASE_URL` | `https://api.bentolabs.ai` | Override only for self-hosted or local dev. Must be `http://` or `https://`. |
+
+## In-code config
+
+`init()` kwargs override env vars:
+
+```python
+import bentolabs_sdk.analytics as bento
+
+bento.init(api_key="bl_pk_explicit", base_url="http://localhost:8080")
+```
+
+`init()` is optional. The first `track_ai` call will lazy-initialize from env vars automatically. Call `init()` explicitly when you want to pay setup cost up front (cold-start sensitive workloads) or pass credentials from code.
+
+## Lifecycle
+
+| When | What to call |
+|---|---|
+| Long-running service | Nothing. Lazy init on the first `track_ai` works. |
+| Serverless or cold-start sensitive | Call `bento.init()` at module load to pay the setup cost up front instead of on a user request. |
+| Short-lived script or Lambda | Call `bento.flush()` before exit. Spans batch by default; without flushing, the last few calls may not ship. |
+| Rotating credentials | `bento.shutdown()` then `bento.init(api_key="bl_pk_new...")`. |
+
+<Warning>
+  Calling `init()` twice with conflicting credentials raises `BentoAuthError("already_initialized")`. Call `shutdown()` first to rotate.
+</Warning>
+
+## Errors
+
+The SDK raises `BentoAuthError` with a typed `code` for fail-fast cases:
+
+```python
+from bentolabs_sdk import BentoAuthError
+
+try:
+    bento.init()
+except BentoAuthError as exc:
+    if exc.code == "missing_api_key":
+        # telemetry disabled or misconfigured
+        pass
+    elif exc.code == "invalid_api_key_format":
+        # key doesn't start with bl_pk_
+        pass
+    elif exc.code == "already_initialized":
+        # conflicting credentials, call shutdown() first
+        pass
+    raise
+```
+
+| Code | When |
+|---|---|
+| `missing_api_key` | No key passed and `BENTOLABS_API_KEY` not set. |
+| `invalid_api_key_format` | Key does not start with `bl_pk_`. |
+| `already_initialized` | `init()` called twice with conflicting `api_key` or `base_url`. |
+
+## Resolution helpers
+
+For tools that need to know the resolved config without standing up a tracer:
+
+```python
+from bentolabs_sdk import resolve_options
+
+cfg = resolve_options()
+print(cfg.api_key, cfg.base_url)
+```
+
+Returns a frozen `BentoConfig(api_key, base_url)` dataclass. Same resolution order as `init()`.

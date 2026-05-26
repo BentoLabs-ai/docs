@@ -1,97 +1,88 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call."
+icon: "house"
 ---
 
-## Setting up
+BentoLabs is product analytics built for AI apps. Add one SDK call where your model runs and the dashboard takes over: multi-turn conversation timelines, cost and model breakdowns, per-user views, and a step-by-step replay of every agent run.
 
-Get your documentation site up and running in minutes.
+## Why BentoLabs
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+You can't measure an AI app the way you'd measure a normal product. A click isn't a conversation. A pageview isn't a model call. Tool use, retries, cost, and multi-step reasoning don't fit a generic event schema, and retrofitting them never feels right.
 
-## Make it yours
+BentoLabs treats AI primitives as first-class:
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Native AI columns" icon="layer-group">
+    `model`, `provider`, `convo_id`, `user_id`, and tool kind are columns out of the box. Filter, group, and break down by any of them without schema work.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Multi-turn by default" icon="comments">
+    Pass the same `convo_id` and every turn, model call, and tool call stitches into one conversation timeline.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Agent runs as one row" icon="route">
+    A trajectory captures the full plan-act-respond loop. Click in for the step-by-step.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Custom dimensions, zero migrations" icon="sliders">
+    `properties={"experiment_id": 17, "is_premium": True}` is a new filter the moment you ship.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+The SDK speaks OpenTelemetry under the hood. If you already have OTel set up, it slots in. If you don't, you'd never know it was there.
 
-Everything you need to create world-class documentation.
+## Start here
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Send your first AI event in under a minute.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Data model" icon="diagram-project" href="/concepts/data-model">
+    Trajectories, spans, attributes, and how they group into sessions.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## Set up with an AI coding tool
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Prompt description="Install the BentoLabs docs skill and MCP server so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate the BentoLabs SDK into this project. Install the BentoLabs docs skill (`npx skills add https://docs.bentolabs.ai`), detect Python vs TypeScript and install the right SDK package, then wrap the main LLM call sites with `bento.track_ai(...)` passing `event`, `user_id`, `convo_id`, `model`, `provider`, `input`, and `output`. Add `BENTOLABS_API_KEY` to the env config and point me to https://platform.bentolabs.ai if I need a key.
+</Prompt>
+
+For Claude Code, Codex, OpenCode, and Windsurf, see the [quickstart](/quickstart#other-ai-coding-tools) for per-tool install commands.
+
+## Pick your SDK
+
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="/python/installation">
+    `pip install bentolabs-sdk`. Full analytics surface: `track_ai`, trajectories, decorators.
+  </Card>
+  <Card title="TypeScript SDK" icon="js" href="/typescript">
+    Coming soon. Node and browser support is in active development.
+  </Card>
+</CardGroup>
+
+## What you get
+
+<CardGroup cols={2}>
+  <Card title="Trace timeline" icon="timeline">
+    Multi-turn conversations and tool calls grouped into a single trace.
+  </Card>
+  <Card title="Cost and model breakdown" icon="chart-pie">
+    Token usage and spend by model, provider, user, or custom dimension.
+  </Card>
+  <Card title="User-level filtering" icon="user">
+    Filter and aggregate by your own `user_id`. No profile data stored.
+  </Card>
+  <Card title="OTel native" icon="cube">
+    Standard OTLP under the hood. Works alongside your existing tracing.
+  </Card>
+</CardGroup>
+
+## Need help
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="wrench" href="/concepts/troubleshooting">
+    What to check when nothing shows up.
+  </Card>
+  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
+    Recent SDK releases.
+  </Card>
+</CardGroup>

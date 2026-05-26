@@ -1,122 +1,205 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "BentoLabs",
+  "description": "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call.",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#FF3C00",
+    "light": "#FF7A4D",
+    "dark": "#C23D0F"
   },
   "favicon": "/favicon.svg",
+  "fonts": {
+    "heading": {
+      "family": "Inter"
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Get started",
+        "icon": "rocket",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Overview",
+            "icon": "house",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Concepts",
+            "icon": "book",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "concepts/data-model",
+              "concepts/trajectories",
+              "concepts/attributes",
+              "concepts/sessions",
+              "concepts/troubleshooting"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Python SDK",
+        "icon": "python",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Get started",
+            "icon": "rocket",
             "pages": [
-              "api-reference/introduction"
+              "python/installation",
+              "python/configuration"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Analytics",
+            "icon": "chart-line",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "python/track-ai",
+              "python/trajectories",
+              "python/properties"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "icon": "microchip",
+            "pages": [
+              "python/otel-transport",
+              "python/threading-model"
+            ]
+          },
+          {
+            "group": "Migrations",
+            "icon": "arrow-right-arrow-left",
+            "pages": [
+              "python/from-raindrop"
             ]
           }
         ]
+      },
+      {
+        "tab": "TypeScript SDK",
+        "icon": "js",
+        "tag": "Coming soon",
+        "pages": [
+          "typescript/index"
+        ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "https://bentolabs.ai"
+  },
+  "appearance": {
+    "default": "dark"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Changelog",
+        "href": "/changelog",
+        "icon": "clock-rotate-left"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/BentoLabs-ai",
+        "icon": "github"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://platform.bentolabs.ai"
     }
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "assistant",
+      "claude",
+      "chatgpt",
+      "perplexity",
+      "add-mcp",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "seo": {
+    "metatags": {
+      "title": "BentoLabs Documentation",
+      "description": "Product analytics for AI apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
+      "keywords": "BentoLabs, AI analytics, LLM analytics, agent analytics, conversation analytics, OpenTelemetry, Python SDK, TypeScript SDK, gen_ai, span processor",
+      "author": "BentoLabs",
+      "og:type": "website",
+      "og:site_name": "BentoLabs Docs",
+      "og:title": "BentoLabs Documentation",
+      "og:description": "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call.",
+      "og:url": "https://docs.bentolabs.ai",
+      "og:locale": "en_US",
+      "twitter:card": "summary",
+      "twitter:site": "@bentolabsai",
+      "twitter:title": "BentoLabs Documentation",
+      "twitter:description": "Product analytics for AI apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
+      "robots": "index, follow",
+      "googlebot": "index, follow"
+    },
+    "indexing": "navigable"
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+      "x": "https://x.com/bentolabsai",
+      "github": "https://github.com/BentoLabs-ai",
+      "linkedin": "https://linkedin.com/company/bentolabs"
+    },
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          {
+            "label": "Dashboard",
+            "href": "https://platform.bentolabs.ai"
+          },
+          {
+            "label": "Website",
+            "href": "https://bentolabs.ai"
+          }
+        ]
+      },
+      {
+        "header": "Developers",
+        "items": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/BentoLabs-ai"
+          },
+          {
+            "label": "Python SDK",
+            "href": "/python/installation"
+          },
+          {
+            "label": "TypeScript SDK",
+            "href": "/typescript"
+          }
+        ]
+      },
+      {
+        "header": "Company",
+        "items": [
+          {
+            "label": "Support",
+            "href": "mailto:support@bentolabs.ai"
+          }
+        ]
+      }
+    ]
   }
 }

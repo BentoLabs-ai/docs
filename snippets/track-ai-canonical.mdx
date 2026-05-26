@@ -1,0 +1,38 @@
+<CodeGroup>
+```python Python
+import bentolabs_sdk.analytics as bento
+
+bento.track_ai(
+    event="user_message",
+    user_id="user_42",
+    input="What's the capital of France?",
+    output="Paris.",
+    model="claude-3-5-sonnet-20241022",
+    provider="anthropic",
+    convo_id="conv_abc",
+)
+```
+
+```ts TypeScript
+import { BentoLabsSpanProcessor } from "@bentolabs/sdk";
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { trace } from "@opentelemetry/api";
+
+const provider = new NodeTracerProvider({
+  spanProcessors: [new BentoLabsSpanProcessor()],
+});
+provider.register();
+
+const tracer = trace.getTracer("my-app");
+tracer.startActiveSpan("user_message", (span) => {
+  span.setAttribute("gen_ai.user.id", "user_42");
+  span.setAttribute("gen_ai.request.model", "claude-3-5-sonnet-20241022");
+  span.setAttribute("gen_ai.system", "anthropic");
+  span.setAttribute("input.value", "What's the capital of France?");
+  span.setAttribute("output.value", "Paris.");
+  span.end();
+});
+
+await provider.forceFlush();
+```
+</CodeGroup>
