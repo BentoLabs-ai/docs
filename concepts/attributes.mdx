@@ -94,9 +94,9 @@ The kind of a span lives in `openinference.span.kind`. The SDK sets it for you:
 
 | API                                          | Kind     |
 |----------------------------------------------|----------|
-| `bento.track_ai(...)`                        | _(unset, treated as LLM call)_ |
-| `bento.tool_span(...)`, `@bento.tool`        | `"tool"` |
-| `interaction.tool_span(...)`                 | `"tool"` |
+| `bento.track_ai()`                        | _(unset, treated as LLM call)_ |
+| `bento.tool_span()`, `@bento.tool`        | `"tool"` |
+| `interaction.tool_span()`                 | `"tool"` |
 
 OpenInference defines other kinds (`retriever`, `embedding`, `agent`, `chain`). Set them through `properties`:
 
