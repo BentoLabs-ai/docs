@@ -42,7 +42,9 @@ jobs:
           mkdir -p /tmp/skill-probe
           cd /tmp/skill-probe
           npx --yes skills@latest add "$WORKSPACE" --list 2>&1 | tee probe.log
-          grep -Eq '^\s*│?\s*bentolabs\b' probe.log || {
+          # Strip ANSI escapes before grepping; CLI prints box-drawn TUI with color codes.
+          # Lowercase "bentolabs" only appears as the skill-name line; the description uses "BentoLabs".
+          tr -d '\033' < probe.log | grep -Fq 'bentolabs' || {
             echo "::error::skills CLI did not detect the 'bentolabs' skill at the repo root"
             exit 1
           }
@@ -103,7 +105,7 @@ jobs:
           mkdir -p /tmp/skill-public-probe
           cd /tmp/skill-public-probe
           npx --yes skills@latest add "$DOCS_URL" --list 2>&1 | tee probe.log
-          grep -Eq '^\s*│?\s*bentolabs\b' probe.log || {
+          tr -d '\033' < probe.log | grep -Fq 'bentolabs' || {
             echo "::error::Public 'npx skills add $DOCS_URL' did not list bentolabs"
             exit 1
           }
