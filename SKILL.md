@@ -108,23 +108,37 @@ grep -rnE "load_dotenv|from dotenv|pydantic_settings|BaseSettings" --include="*.
 
 The env file is where `BENTOLABS_API_KEY` should be added (with a placeholder value; the real secret lives in the user's secret manager).
 
-### 1g. Detect existing Raindrop or Langfuse usage
+### 1g. Detect existing competing SDKs (Raindrop, Langfuse)
 
 ```bash
-# Raindrop
+# Raindrop (raindrop-ai, import raindrop.analytics)
 grep -rnE "import raindrop|from raindrop|raindrop\.(init|track_ai|begin|identify|track_signal|flush)" --include="*.py" . 2>/dev/null
 grep -nE "raindrop" pyproject.toml requirements*.txt 2>/dev/null
 
-# Langfuse
+# Langfuse (langfuse Python SDK v3)
 grep -rnE "from langfuse|import langfuse|@observe|from langfuse\.(openai|langchain)" --include="*.py" . 2>/dev/null
 grep -nE "^langfuse|^\s*langfuse" pyproject.toml requirements*.txt 2>/dev/null
 ```
 
-If any matches, the integration is a migration. Follow the "Migrations" section below (the table that matches the SDK in use) instead of the greenfield Step 3 patterns.
+**If any match — ASK the user before proceeding.** Do not assume migration vs. fresh integration; the answer changes Step 3 fundamentally. Present this exact question:
+
+> I found existing **`<Raindrop|Langfuse>`** usage at `<file:line>` (and N more sites). Do you want me to:
+>
+> 1. **Migrate** the existing code from `<Raindrop|Langfuse>` to Bento (port every call site, then remove the old SDK)
+> 2. **Fresh integration** — keep `<Raindrop|Langfuse>` in place and add Bento alongside it (e.g. you're A/B'ing or only instrumenting new code)
+>
+> Which one?
+
+Then:
+
+- If **migrate**: jump to the Migrations section below. Follow the per-SDK guide (Raindrop or Langfuse) — full translation tables live at `https://docs.bentolabs.ai/migrations/raindrop.md` and `https://docs.bentolabs.ai/migrations/langfuse.md`. Both SDKs can coexist in the process during the port; only uninstall the old one after Step 5 verify passes.
+- If **fresh integration**: continue with the greenfield Step 3 patterns. Note in your summary that the project also runs `<Raindrop|Langfuse>` so the reviewer knows two SDKs will emit spans (potentially duplicate traces if both wrap the same call site).
+
+Never silently pick one path. Ask, wait for the answer, then proceed.
 
 ### 1h. Summarize before continuing
 
-Write a short summary back to the user with: language and Python version, framework, **whether ADK is in use (drives the Step 3 path)**, list of LLM call sites (file:line + which provider), whether OTel is already wired, where env vars live, whether Raindrop or Langfuse is present (drives Migrations path). Confirm before editing.
+Write a short summary back to the user with: language and Python version, framework, **whether ADK is in use (drives Step 3 path A)**, list of LLM call sites (file:line + which provider), whether OTel is already wired, where env vars live, **whether Raindrop or Langfuse is present and which path the user picked in Step 1g**. Confirm before editing.
 
 ## Step 2: Install and authenticate
 
@@ -598,7 +612,12 @@ For the same dashboard columns the analytics layer fills, upstream spans must ca
 
 ## Migrations
 
-If Step 1g found Raindrop or Langfuse, treat the integration as a migration. **Pick the smoothest applicable path first** — manual per-call translation is the last resort.
+Reach this section only after **Step 1g** found Raindrop or Langfuse AND the user explicitly picked **migrate** (not "fresh integration alongside"). If the user picked fresh, return to the greenfield Step 3 patterns and leave the old SDK in place.
+
+Once you're here, **pick the smoothest applicable path first** — manual per-call translation is the last resort. Full per-SDK translation tables and copy-prompt blocks live at:
+
+- `https://docs.bentolabs.ai/migrations/raindrop.md`
+- `https://docs.bentolabs.ai/migrations/langfuse.md`
 
 ### The three migration paths (apply in order, fall through on miss)
 
