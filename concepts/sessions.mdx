@@ -1,0 +1,118 @@
+---
+title: "Sessions and users"
+description: "How conversations and per-user views are stitched together from the IDs you pass."
+icon: "users-line"
+---
+
+A **session** is one conversation between your app and a user. A **user** is one person across all their conversations. The dashboard builds both by grouping trajectories that share a `convo_id` or a `user_id`. There is no separate Session or User object: you pass strings, the grouping happens server-side.
+
+## Conversations
+
+Pass the same `convo_id` to every `bento.begin` or `bento.track_ai` call that belongs in one conversation.
+
+```python
+convo_id = "user_42_chat_99"
+
+bento.track_ai(event="turn_1", convo_id=convo_id, user_id="user_42", input=q1, output=a1, ...)
+bento.track_ai(event="turn_2", convo_id=convo_id, user_id="user_42", input=q2, output=a2, ...)
+```
+
+Both turns show up under the same session row in the dashboard, with the timeline reconstructed from span timestamps.
+
+<Info>
+  `convo_id` becomes the OTel attribute `gen_ai.conversation.id` and lands in the `traces.session_id` column on our side. The attribute name and the column name don't match for historical reasons. Use the kwarg.
+</Info>
+
+### Choosing a `convo_id`
+
+<CardGroup cols={3}>
+  <Card title="Stable" icon="anchor">
+    Survives between requests in the same conversation.
+  </Card>
+  <Card title="Unique" icon="fingerprint">
+    Two different conversations never share an ID.
+  </Card>
+  <Card title="Opaque" icon="eye-slash">
+    UUID, slug, or hash. No PII.
+  </Card>
+</CardGroup>
+
+Common sources:
+
+| Your app has              | Use as `convo_id`                        |
+|---------------------------|------------------------------------------|
+| A chat thread row         | The thread's primary key (stringified)   |
+| A web session             | The session UUID                         |
+| A Slack/Discord channel   | `channel_id:thread_ts`                   |
+| Nothing yet               | Generate one with `uuid4()` at conversation start, store it client-side |
+
+## Users
+
+`user_id` is a pass-through string. We do not store profile data: no email, no name, no traits.
+
+```python
+bento.track_ai(event="answer", user_id="user_42", ...)
+```
+
+Maps to `gen_ai.user.id` (OTel) and `traces.user_id` (column). You can filter the trace list by `user_id`, count distinct users, and pivot any metric by user.
+
+### Choosing a `user_id`
+
+- Use your internal stable user ID (users-table primary key, auth provider `sub` claim, etc.)
+- One ID per real human, across devices
+- Treat it like a foreign key. No PII.
+
+<Tip>
+  **Anonymous users**: generate an ID and store it in a cookie or local storage. That gives you a stable identity without leaking PII.
+
+  ```python
+  user_id = request.cookies.get("anon_id") or new_anon_id()
+  bento.track_ai(event="signup_help", user_id=user_id, ...)
+  ```
+</Tip>
+
+## How the dashboard groups
+
+| You set                                | The dashboard shows |
+|----------------------------------------|---------------------|
+| Same `convo_id` on N spans             | One session with N turns |
+| Same `user_id` across sessions         | All those sessions under one user view |
+| Same `convo_id`, different `user_id`   | One session. The latest `user_id` wins for display. **Avoid this.** |
+| Different `convo_id`, same `user_id`   | N independent sessions under one user |
+
+<Note>
+  Grouping happens at query time, not ingest time. There's no migration to "create a session". Existing trajectories start grouping the moment you start passing the right ID.
+</Note>
+
+## Setting IDs on a trajectory
+
+A trajectory carries `convo_id` and `user_id` on its own span. Child spans don't inherit them; pass the IDs to each `track_ai` call too so per-span filters work.
+
+```python
+convo_id = "chat_99"
+user_id = "user_42"
+
+with bento.begin(event="agent_loop", convo_id=convo_id, user_id=user_id) as t:
+    bento.track_ai(event="plan",   convo_id=convo_id, user_id=user_id, ...)
+    bento.track_ai(event="answer", convo_id=convo_id, user_id=user_id, ...)
+```
+
+<Note>
+  Verbose, but unambiguous. Inheritance from parent to child is on the roadmap.
+</Note>
+
+## What sessions are not
+
+<AccordionGroup>
+  <Accordion title="Not a billing or quota concept">
+    Sessions are a dashboard grouping. You're billed on span volume.
+  </Accordion>
+
+  <Accordion title="Not bounded in time">
+    A session has no TTL. Keep passing the same `convo_id` for a year and the dashboard will show one very long session. Rotate IDs when a conversation logically ends.
+  </Accordion>
+
+  <Accordion title="Not user-scoped automatically">
+    Two different `user_id`s sharing a `convo_id` look like one session with mixed users. Rotate `convo_id` whenever the user changes.
+  </Accordion>
+</AccordionGroup>

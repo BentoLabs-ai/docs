@@ -90,3 +90,9 @@ For component reference, configuration, and writing standards, install the Mintl
 ```bash
 npx skills add https://mintlify.com/docs
 ```
+
+## Authoring the BentoLabs `skill.md`
+
+The repo ships a `skill.md` at root. Mintlify serves it verbatim at `https://docs.bentolabs.ai/skill.md`, overriding the auto-generated default. That URL is what `npx skills add https://docs.bentolabs.ai` reads, so the file is the public install surface for the BentoLabs agent skill.
+
+Keep the frontmatter `description` accurate and full of trigger phrases. It is the only signal Claude uses to decide whether to load the skill into context. Body stays tight (under ~5 KB rendered); deeper detail lives in the per-page `.md` URLs the body links to. Do not delete `skill.md` thinking it is unused.

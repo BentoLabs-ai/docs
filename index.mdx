@@ -1,16 +1,33 @@
 ---
 title: "Introduction"
-description: "AI observability for production agents and LLM apps. Drop in an SDK, get traces, costs, and conversation timelines without managing OpenTelemetry yourself."
+description: "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call."
 icon: "house"
 ---
 
-BentoLabs is an observability platform for AI applications. You add one SDK call where your model runs, and the dashboard handles the rest: multi-turn conversation timelines, cost and token breakdowns, tool-call traces, and per-user filtering.
+BentoLabs is product analytics built for AI apps. Add one SDK call where your model runs and the dashboard takes over: multi-turn conversation timelines, cost and model breakdowns, per-user views, and a step-by-step replay of every agent run.
 
 ## Why BentoLabs
 
-You probably already have OpenTelemetry instrumentation somewhere. Bento doesn't replace it. The SDK ships as an OTLP span processor under the hood, so it slots into any existing tracer provider without conflicts. If you'd rather not think about OTel at all, the analytics layer (`bento.track_ai`, `bento.begin`, decorators) gives you a Raindrop-shaped API that's three lines of setup.
+You can't measure an AI app the way you'd measure a normal product. A click isn't a conversation. A pageview isn't a model call. Tool use, retries, cost, and multi-step reasoning don't fit a generic event schema, and retrofitting them never feels right.
 
-The platform is opinionated about AI workloads: `gen_ai.*` semantic conventions are first-classed into dashboard columns, conversation IDs link multi-turn flows, and tool spans pick up automatic classification. No user profile storage, no SDK-side PII inference, no auto-tagging that gets things wrong.
+BentoLabs treats AI primitives as first-class:
+
+<CardGroup cols={2}>
+  <Card title="Native AI columns" icon="layer-group">
+    `model`, `provider`, `convo_id`, `user_id`, and tool kind are columns out of the box. Filter, group, and break down by any of them without schema work.
+  </Card>
+  <Card title="Multi-turn by default" icon="comments">
+    Pass the same `convo_id` and every turn, model call, and tool call stitches into one conversation timeline.
+  </Card>
+  <Card title="Agent runs as one row" icon="route">
+    A trajectory captures the full plan-act-respond loop. Click in for the step-by-step.
+  </Card>
+  <Card title="Custom dimensions, zero migrations" icon="sliders">
+    `properties={"experiment_id": 17, "is_premium": True}` is a new filter the moment you ship.
+  </Card>
+</CardGroup>
+
+The SDK speaks OpenTelemetry under the hood. If you already have OTel set up, it slots in. If you don't, you'd never know it was there.
 
 ## Start here
 
@@ -18,10 +35,18 @@ The platform is opinionated about AI workloads: `gen_ai.*` semantic conventions 
   <Card title="Quickstart" icon="bolt" href="/quickstart">
     Send your first AI event in under a minute.
   </Card>
-  <Card title="Attribute mapping" icon="table" href="/concepts/attribute-mapping">
-    What each SDK kwarg becomes in the dashboard.
+  <Card title="Data model" icon="diagram-project" href="/concepts/data-model">
+    Trajectories, spans, attributes, and how they group into sessions.
   </Card>
 </CardGroup>
+
+## Set up with an AI coding tool
+
+<Prompt description="Install the BentoLabs docs skill and MCP server so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate the BentoLabs SDK into this project. Install the BentoLabs docs skill (`npx skills add https://docs.bentolabs.ai`), detect Python vs TypeScript and install the right SDK package, then wrap the main LLM call sites with `bento.track_ai(...)` passing `event`, `user_id`, `convo_id`, `model`, `provider`, `input`, and `output`. Add `BENTOLABS_API_KEY` to the env config and point me to https://platform.bentolabs.ai if I need a key.
+</Prompt>
+
+For Claude Code, Codex, OpenCode, and Windsurf, see the [quickstart](/quickstart#other-ai-coding-tools) for per-tool install commands.
 
 ## Pick your SDK
 
@@ -29,8 +54,8 @@ The platform is opinionated about AI workloads: `gen_ai.*` semantic conventions 
   <Card title="Python SDK" icon="python" href="/python/installation">
     `pip install bentolabs-sdk`. Full analytics surface: `track_ai`, trajectories, decorators.
   </Card>
-  <Card title="TypeScript SDK" icon="js" href="/typescript/installation">
-    `npm install @bentolabs/sdk`. OTel span processor for Node.
+  <Card title="TypeScript SDK" icon="js" href="/typescript">
+    Coming soon. Node and browser support is in active development.
   </Card>
 </CardGroup>
 

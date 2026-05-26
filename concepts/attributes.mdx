@@ -1,0 +1,151 @@
+---
+title: "Attributes"
+description: "The dimensions every chart can filter, group, and break down by."
+icon: "table"
+---
+
+Attributes are how you slice everything in the dashboard: filter by user, break down spend by model, segment by your own experiment ID. Some are built into the SDK (`user_id`, `model`, `convo_id`); the rest you define yourself with `properties={...}`.
+
+If you skip a kwarg, the dashboard column behind it stays empty for that call.
+
+## The built-in fields
+
+| Kwarg              | OTel attribute              | Column           | Skip it and... |
+|--------------------|-----------------------------|------------------|----------------|
+| `event` _(required)_ | `span.name`               | Span name        | _(required)_   |
+| `user_id`          | `gen_ai.user.id`            | User             | No user filter |
+| `convo_id`         | `gen_ai.conversation.id`    | Session          | Turns look standalone |
+| `model`            | `gen_ai.request.model`      | Model            | No cost or model breakdown |
+| `provider`         | `gen_ai.system`             | Provider         | No provider filter |
+| `input`            | `input.value`               | Input            | Empty input column |
+| `output`           | `output.value`              | Output           | Empty output column |
+| `properties={...}` | each key, as-is             | Attributes JSON  | No custom dimensions |
+
+<Tip>
+  The mapping is the same for `track_ai`, `begin`, `interaction.update`, `interaction.finish`, and `tool_span`. Unpassed kwargs are omitted from the span, not set to null.
+</Tip>
+
+## Why each one matters
+
+<AccordionGroup>
+  <Accordion title="provider has no auto-inference">
+    A model name like `claude-3-5-sonnet` is not auto-tagged as Anthropic. Bedrock model IDs (`anthropic.claude-3-...`) are ambiguous on purpose. Pass `provider=` explicitly: `"openai"`, `"anthropic"`, `"google"`, `"aws_bedrock"`, etc.
+  </Accordion>
+
+  <Accordion title="convo_id is the only way to group turns">
+    Without `convo_id`, multi-turn conversations look like N independent requests. See [Sessions and users](/concepts/sessions).
+  </Accordion>
+
+  <Accordion title="user_id is required for user filtering">
+    Required to filter the trace list by user. We do not store profile data (no email, no name, no traits). `user_id` is a pass-through string only.
+  </Accordion>
+
+  <Accordion title="model is required for the cost view">
+    The cost view and per-model breakdowns key off `gen_ai.request.model`. Without it, spend rolls up under "Unknown".
+  </Accordion>
+</AccordionGroup>
+
+## Custom attributes via `properties`
+
+Use `properties` for anything you want to filter or aggregate on that isn't covered above.
+
+```python
+bento.track_ai(
+    event="answer",
+    user_id="user_42",
+    model="gpt-4o",
+    provider="openai",
+    input=question,
+    output=answer,
+    properties={
+        "experiment_id": 17,
+        "is_premium": True,
+        "feature_flags": ["new_planner", "fast_path"],
+        "latency_budget_ms": 1500,
+    },
+)
+```
+
+Each key in `properties` becomes a top-level OTel attribute with the same name. No namespace is added.
+
+<Warning>
+  **Don't put `gen_ai.*`, `input.value`, `output.value`, or `openinference.span.kind` in `properties`.** SDK kwargs are written *after* properties and will silently overwrite them. Use the dedicated kwargs.
+</Warning>
+
+### Type fidelity
+
+Property values keep their type when possible, so downstream filters and aggregates work.
+
+| You pass                       | Span sees    | Notes |
+|--------------------------------|--------------|-------|
+| `"foo"` _(str)_                | string       |       |
+| `42` _(int)_                   | int          | filterable: `experiment_id > 100` |
+| `3.14` _(float)_               | float        |       |
+| `True` _(bool)_                | bool         | filterable: `is_premium = true` |
+| `[1, 2, 3]` _(homogeneous)_    | array        |       |
+| `{"nested": "x"}` _(dict)_     | JSON string  | OTel attributes are flat |
+| `[1, "two"]` _(mixed list)_    | JSON string  | OTel can't store heterogeneous arrays |
+
+The JSON-string fallback is lossless but won't be filterable as a number or bool. Flatten dicts to multiple keys (`user.tier`, `user.region`) if you need numeric filters.
+
+## Span kind
+
+The kind of a span lives in `openinference.span.kind`. The SDK sets it for you:
+
+| API                                          | Kind     |
+|----------------------------------------------|----------|
+| `bento.track_ai(...)`                        | _(unset, treated as LLM call)_ |
+| `bento.tool_span(...)`, `@bento.tool`        | `"tool"` |
+| `interaction.tool_span(...)`                 | `"tool"` |
+
+OpenInference defines other kinds (`retriever`, `embedding`, `agent`, `chain`). Set them through `properties`:
+
+```python
+bento.track_ai(
+    event="vector_search",
+    input=query,
+    output=results,
+    properties={"openinference.span.kind": "retriever"},
+)
+```
+
+## What an emitted span looks like
+
+The OTel JSON for a `track_ai` call with `properties={"experiment_id": 17}`:
+
+```json
+{
+  "name": "answer",
+  "attributes": {
+    "gen_ai.user.id": "user_42",
+    "gen_ai.conversation.id": "chat_99",
+    "gen_ai.request.model": "gpt-4o",
+    "gen_ai.system": "openai",
+    "input.value": "...",
+    "output.value": "...",
+    "experiment_id": 17
+  }
+}
+```
+
+The same attributes show up in any OTel backend you wire this into. Nothing about your code is BentoLabs-specific.
+
+## Common mistakes
+
+<Steps>
+  <Step title="Forgetting provider">
+    Half your dashboard filters go unused. Pass it on every call.
+  </Step>
+  <Step title="Forgetting convo_id">
+    Conversations fragment into single-turn rows.
+  </Step>
+  <Step title="Putting gen_ai.* keys in properties">
+    SDK kwargs overwrite them after properties are applied.
+  </Step>
+  <Step title="Bedrock model IDs with provider=anthropic">
+    Bedrock routes through AWS. Use `provider="aws_bedrock"`.
+  </Step>
+  <Step title="No flush() in short scripts">
+    The exporter batches. Call `bento.flush()` (or `bento.shutdown()`) before a short-lived process exits.
+  </Step>
+</Steps>

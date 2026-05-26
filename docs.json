@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "BentoLabs",
-  "description": "AI observability for production agents and LLM apps. Drop in an SDK, get traces, costs, and conversation timelines without managing OpenTelemetry yourself.",
+  "description": "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call.",
   "colors": {
     "primary": "#FF3C00",
     "light": "#FF7A4D",
@@ -35,15 +35,11 @@
             "group": "Concepts",
             "icon": "book",
             "pages": [
-              "concepts/attribute-mapping",
+              "concepts/data-model",
+              "concepts/trajectories",
+              "concepts/attributes",
+              "concepts/sessions",
               "concepts/troubleshooting"
-            ]
-          },
-          {
-            "group": "Releases",
-            "icon": "clock-rotate-left",
-            "pages": [
-              "changelog"
             ]
           }
         ]
@@ -89,15 +85,9 @@
       {
         "tab": "TypeScript SDK",
         "icon": "js",
-        "groups": [
-          {
-            "group": "Get started",
-            "icon": "rocket",
-            "pages": [
-              "typescript/installation",
-              "typescript/usage"
-            ]
-          }
+        "tag": "Coming soon",
+        "pages": [
+          "typescript/index"
         ]
       }
     ]
@@ -112,6 +102,11 @@
   },
   "navbar": {
     "links": [
+      {
+        "label": "Changelog",
+        "href": "/changelog",
+        "icon": "clock-rotate-left"
+      },
       {
         "label": "GitHub",
         "href": "https://github.com/BentoLabs-ai",
@@ -141,19 +136,19 @@
   "seo": {
     "metatags": {
       "title": "BentoLabs Documentation",
-      "description": "AI observability for production agents and LLM apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
-      "keywords": "BentoLabs, AI observability, LLM tracing, OpenTelemetry, agent monitoring, LLM analytics, Python SDK, TypeScript SDK, gen_ai, span processor",
+      "description": "Product analytics for AI apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
+      "keywords": "BentoLabs, AI analytics, LLM analytics, agent analytics, conversation analytics, OpenTelemetry, Python SDK, TypeScript SDK, gen_ai, span processor",
       "author": "BentoLabs",
       "og:type": "website",
       "og:site_name": "BentoLabs Docs",
       "og:title": "BentoLabs Documentation",
-      "og:description": "AI observability for production agents and LLM apps. Drop in an SDK, get traces, costs, and conversation timelines.",
+      "og:description": "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call.",
       "og:url": "https://docs.bentolabs.ai",
       "og:locale": "en_US",
       "twitter:card": "summary",
       "twitter:site": "@bentolabsai",
       "twitter:title": "BentoLabs Documentation",
-      "twitter:description": "AI observability for production agents and LLM apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
+      "twitter:description": "Product analytics for AI apps. SDK docs, quickstart, and reference for the BentoLabs platform.",
       "robots": "index, follow",
       "googlebot": "index, follow"
     },
@@ -192,7 +187,7 @@
           },
           {
             "label": "TypeScript SDK",
-            "href": "/typescript/installation"
+            "href": "/typescript"
           }
         ]
       },

@@ -1,0 +1,125 @@
+---
+title: "Trajectories"
+description: "One agent run, grouped into one row in the dashboard."
+icon: "route"
+---
+
+A **trajectory** is one run of your agent: from the user's prompt to your final response, with every model call, tool call, retry, and planning step in between grouped together. In the dashboard, a trajectory is one row. Click into it and you see the full step-by-step.
+
+You open one with `bento.begin(...)` or `@bento.interaction`. Every `track_ai` and `tool_span` call made while it is open joins that trajectory.
+
+## When to use what
+
+| Use this              | When                                              |
+|-----------------------|---------------------------------------------------|
+| `bento.track_ai(...)` | One LLM call. No surrounding agent loop.          |
+| `bento.begin(...)`    | A multi-step agent run. You want every step grouped under one row in the dashboard. |
+
+<Note>
+  If you only make one model call per request, you don't need `begin`. A bare `track_ai` is already a one-span trajectory.
+</Note>
+
+## Opening a trajectory
+
+<Tabs>
+  <Tab title="Context manager (recommended)">
+    ```python
+    import bentolabs_sdk.analytics as bento
+
+    with bento.begin(event="answer_question", user_id="user_42", convo_id="chat_99") as t:
+        plan = bento.track_ai(event="plan",   input=q,         output=plan_text, model="gpt-4o", provider="openai")
+        answer = bento.track_ai(event="answer", input=plan_text, output=final,    model="gpt-4o", provider="openai")
+        t.update(output=final)
+    ```
+
+    The context manager closes the trajectory on exit, including on exceptions.
+  </Tab>
+
+  <Tab title="Decorator">
+    ```python
+    @bento.interaction
+    def answer_question(question: str, user_id: str, convo_id: str):
+        ...
+    ```
+
+    Opens a trajectory on entry, closes it on return. Defaults `event` to the function name. Pass `event=` to override. Does not auto-capture arguments.
+  </Tab>
+
+  <Tab title="Imperative">
+    ```python
+    t = bento.begin(event="answer_question", user_id="user_42", convo_id="chat_99")
+    try:
+        ...
+    finally:
+        t.finish(output=final)
+    ```
+
+    Use only when control flow can't fit a `with` block. You are responsible for cleanup on exception.
+  </Tab>
+</Tabs>
+
+## How children attach
+
+Spans emitted while a trajectory is open become its children automatically. The parent context lives in a Python `ContextVar`, so it follows your code through:
+
+- Synchronous calls in the same thread
+- `async`/`await` in the same task
+- `asyncio.create_task(...)` (the new task inherits the active context at creation)
+
+<Warning>
+  Context does **not** cross into a new `threading.Thread`, a `ThreadPoolExecutor` worker, or a subprocess. Spans emitted from those become their own root trajectories. See [Threading model](/python/threading-model) for the full rules and manual forwarding.
+</Warning>
+
+## Updating mid-flight
+
+```python
+with bento.begin(event="agent_loop", user_id="u1") as t:
+    t.update(input=user_message)
+    ...
+    t.update(properties={"iterations": 3, "used_fallback": True})
+    t.finish(output=final_answer)
+```
+
+`update` is additive. Existing properties are preserved unless you overwrite them by key. `finish(output=, properties=)` is a final `update` plus closing the span.
+
+## Lifecycle rules
+
+<AccordionGroup>
+  <Accordion title="LIFO finish order">
+    Nested trajectories must be finished in reverse order. The context manager handles this for you. Out-of-order `finish()` raises `RuntimeError`.
+  </Accordion>
+
+  <Accordion title="Idempotent finish">
+    Calling `finish()` twice on the same trajectory is a no-op the second time.
+  </Accordion>
+
+  <Accordion title="Detached parent">
+    Both `begin` and `track_ai` detach from any outer OTel context. Customer FastAPI or Django spans will not become parents of BentoLabs spans by accident.
+  </Accordion>
+</AccordionGroup>
+
+## Span kinds inside a trajectory
+
+A trajectory contains spans of any kind. The two emitted directly by the SDK:
+
+- **LLM call** _(default kind)_: `bento.track_ai(...)`. Carries `gen_ai.*` attributes.
+- **Tool call**: `bento.tool_span(...)`, `interaction.tool_span(...)`, or `@bento.tool`. Carries `openinference.span.kind="tool"`.
+
+```python
+with bento.begin(event="agent_loop", user_id="u1") as t:
+    bento.track_ai(event="plan", model="gpt-4o", provider="openai", input=..., output=...)
+
+    with t.tool_span(name="search_docs", input={"q": "refund policy"}) as ts:
+        result = search(q="refund policy")
+        ts.set_output(result)
+
+    bento.track_ai(event="answer", model="gpt-4o", provider="openai", input=..., output=...)
+```
+
+The two `track_ai` spans and the `tool_span` all parent to the trajectory.
+
+## What a trajectory is *not*
+
+- **Not a session.** A session is the set of trajectories that share a `convo_id`. See [Sessions and users](/concepts/sessions).
+- **Not a request.** One HTTP request can open zero, one, or many trajectories.
+- **Not auto-instrumented.** The SDK does not patch OpenAI, Anthropic, or LangChain. You decide what becomes a span.

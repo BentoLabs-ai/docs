@@ -8,9 +8,88 @@ import InstallSdk from "/snippets/install-sdk.mdx";
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
 
-<Tip>
-  **Building with an AI coding tool?** Use the menu in the top-right of any page to copy the page as markdown, open it in Claude / ChatGPT / Perplexity, or install these docs as an MCP server in Claude Code, Cursor, or VSCode (`Add MCP`). Your AI tool gets full context on the SDK without you copy-pasting.
-</Tip>
+<Prompt description="Install the BentoLabs docs skill and MCP server so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate the BentoLabs SDK into this project.
+
+  1. Install the BentoLabs skill so you have the BentoLabs docs as context:
+     `npx skills add https://docs.bentolabs.ai`
+  2. Detect whether this project is Python or TypeScript and install the matching SDK package (`bentolabs-sdk` or `@bentolabs/sdk`).
+  3. Read `https://docs.bentolabs.ai/quickstart` and `https://docs.bentolabs.ai/concepts/attributes`.
+  4. Find the main LLM call sites in this codebase and wrap them with `bento.track_ai(...)` (Python) or the OTel span pattern (TypeScript), passing `event`, `user_id`, `convo_id`, `model`, `provider`, `input`, and `output`.
+  5. Add `BENTOLABS_API_KEY` to the project's environment configuration. Tell me where to get a key (https://platform.bentolabs.ai) if it isn't set.
+  6. For multi-step or tool-calling flows, wrap them in `bento.begin(...)` trajectories so the dashboard shows them as one trace.
+</Prompt>
+
+### Other AI coding tools
+
+<Tabs>
+  <Tab title="Claude Code">
+    Install the skill so Claude Code reads the docs as context:
+
+    ```bash
+    npx skills add https://docs.bentolabs.ai
+    ```
+
+    Optionally add the docs as an MCP server for live queries:
+
+    ```bash
+    claude mcp add --transport http bentolabs-docs https://docs.bentolabs.ai/mcp
+    ```
+
+    Then run `claude` in your project and paste the prompt from the card above.
+  </Tab>
+
+  <Tab title="Codex">
+    Install the skill:
+
+    ```bash
+    npx skills add https://docs.bentolabs.ai
+    ```
+
+    Add the docs MCP to your `~/.codex/config.toml`:
+
+    ```toml
+    [mcp_servers.bentolabs-docs]
+    type = "http"
+    url = "https://docs.bentolabs.ai/mcp"
+    ```
+
+    Start `codex` in your project and paste the prompt from the card above.
+  </Tab>
+
+  <Tab title="OpenCode">
+    Install the skill:
+
+    ```bash
+    npx skills add https://docs.bentolabs.ai
+    ```
+
+    Add the docs MCP to your `opencode.json`:
+
+    ```json
+    {
+      "mcp": {
+        "bentolabs-docs": {
+          "type": "remote",
+          "url": "https://docs.bentolabs.ai/mcp"
+        }
+      }
+    }
+    ```
+
+    Run `opencode` and paste the prompt from the card above.
+  </Tab>
+
+  <Tab title="Windsurf">
+    Install the skill:
+
+    ```bash
+    npx skills add https://docs.bentolabs.ai
+    ```
+
+    In Windsurf, open the Cascade panel, add a custom MCP server with URL `https://docs.bentolabs.ai/mcp`, then paste the prompt from the card above.
+  </Tab>
+</Tabs>
 
 <Steps>
   <Step title="Get an API key">
@@ -32,7 +111,7 @@ import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
 
 ## What to send
 
-Each kwarg becomes one OTel span attribute, which our ingest first-classes into a column. **What you don't pass becomes invisible to that column.** See [attribute mapping](/concepts/attribute-mapping) for the full table.
+Each kwarg becomes one OTel span attribute, which our ingest first-classes into a column. **What you don't pass becomes invisible to that column.** See [attribute mapping](/concepts/attributes) for the full table.
 
 <Tip>
   Pass `provider`, `convo_id`, `user_id`, and `model` on every call. Skipping any of them silently disables a dashboard feature.
