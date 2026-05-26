@@ -1,0 +1,133 @@
+---
+title: "Trajectories"
+description: "Group multi-step work into a single trace using begin(), decorators, and tool spans."
+icon: "diagram-project"
+---
+
+A **trajectory** is one OTel span that stays open for the lifetime of a conversation, turn, or multi-step task. Subsequent `track_ai` and `tool_span` calls in the same task become children of it, so the whole flow shows up as one trace in the dashboard instead of N independent rows.
+
+## bento.begin()
+
+The context-manager form auto-finishes on exit and records exceptions on the trajectory span.
+
+```python
+import bentolabs_sdk.analytics as bento
+
+with bento.begin(
+    event="user_turn",
+    user_id="u1",
+    input="What's the weather in Paris?",
+    model="claude-3-5-sonnet-20241022",
+    provider="anthropic",
+    convo_id="conv_abc",
+) as interaction:
+    with interaction.tool_span(name="web_search", input={"q": "Paris"}) as ts:
+        results = run_search("Paris")
+        ts.set_output(results)
+
+    bento.track_ai(event="thought", input="Composing reply...")
+
+    interaction.update(output="It's 18C and partly cloudy in Paris.")
+```
+
+The imperative form is available for code that can't use `with`:
+
+```python
+interaction = bento.begin(event="user_turn", user_id="u1", input="...")
+# do work, optionally call interaction.update(...) mid-flight
+interaction.finish(output="...")
+```
+
+<Tip>
+  `interaction.event_id` is the trajectory's span ID (16-hex). Useful for logging or correlating with downstream systems.
+</Tip>
+
+### Parenting and isolation
+
+Trajectories detach from any outer OTel context, the same as a bare `track_ai`. So they're root spans in their own trace even when called inside a customer's existing FastAPI / Django / etc. instrumented stack. `track_ai` calls *inside* a `begin()/finish()` block parent to the trajectory.
+
+<Warning>
+  Trajectories must be finished in reverse open order (LIFO). Finishing an outer trajectory while an inner one is still open raises `RuntimeError`. Use `with bento.begin(...) as i:` to guarantee correct nesting.
+</Warning>
+
+## Decorators
+
+The most ergonomic way to wrap function-shaped work. Both decorators work on sync and async functions.
+
+### @bento.interaction
+
+Wraps a function in `bento.begin()` / `interaction.finish()`. The function name becomes the event name; the return value becomes `output.value`.
+
+```python
+@bento.interaction
+def handle_message(msg: str) -> str:
+    return reply
+
+@bento.interaction(event="user_turn", capture_output=False)
+def handle_message(msg: str) -> str:
+    ...
+```
+
+<Info>
+  `@bento.interaction` does **not** auto-capture arguments. They're often non-trivial to serialize and frequently contain sensitive data. Use `interaction.update(input=...)` from inside the function, or use `@bento.tool` (which does capture).
+</Info>
+
+| Option | Default | Effect |
+|---|---|---|
+| `event` | function name | Override the event name. |
+| `capture_output` | `True` | Set the return value as `output.value`. JSON-serialized if not a string. |
+
+### @bento.tool
+
+Wraps a function in `bento.tool_span(...)`. The function's bound arguments become `input.value` (as a JSON dict), and the return value becomes `output.value`. The span carries `openinference.span.kind="tool"` so downstream classification picks it up.
+
+```python
+@bento.tool
+def web_search(query: str, limit: int = 10) -> list[str]:
+    return [...]
+
+@bento.tool(name="search", capture_input=False)
+def web_search(query: str) -> list[str]:
+    ...
+```
+
+| Option | Default | Effect |
+|---|---|---|
+| `name` | function name | Override the span name. |
+| `capture_input` | `True` | Capture bound arguments as `input.value`. `self`/`cls` are dropped. |
+| `capture_output` | `True` | Set the return value as `output.value`. |
+
+<Tip>
+  Set `capture_input=False` or `capture_output=False` for sensitive args or huge return payloads.
+</Tip>
+
+## Tool spans
+
+When you want a tool span without threading an `Interaction` handle through your code, use the module-level helper:
+
+```python
+with bento.tool_span("web_search", input={"q": "..."}) as ts:
+    result = run_search(...)
+    ts.set_output(result)
+```
+
+Same parenting rule as `track_ai`: parents to the active trajectory if `begin()` is open in this task, else becomes a detached root.
+
+Exceptions raised inside the block are recorded on the span (status=ERROR, exception event) and re-raised.
+
+### ToolSpan API
+
+| Method | Purpose |
+|---|---|
+| `ts.set_output(value)` | Write to `output.value`. Strings pass through; dicts/lists are JSON-serialized. |
+| `ts.set_attribute(key, value)` | Escape hatch for arbitrary OTel attributes. |
+
+## Interaction API
+
+| Method | Purpose |
+|---|---|
+| `interaction.update(input=..., output=..., properties=...)` | Patch attributes on the open trajectory before finish. |
+| `interaction.finish(output=..., properties=...)` | End the trajectory span. Idempotent. |
+| `interaction.tool_span(name, input=..., properties=...)` | Open a child tool span under this trajectory. |
+| `interaction.event_id` | The trajectory's span ID (16-hex string). |
+| `interaction.convo_id` | The conversation ID passed to `begin()`. |

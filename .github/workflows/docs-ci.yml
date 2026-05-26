@@ -1,0 +1,33 @@
+name: docs-ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Validate docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Mintlify CLI
+        run: npm install -g mint
+
+      - name: Validate docs.json and MDX
+        run: mint validate
+
+      - name: Check broken links
+        run: mint broken-links --check-anchors --check-snippets
+
+      - name: Accessibility check
+        run: mint a11y
+        continue-on-error: true

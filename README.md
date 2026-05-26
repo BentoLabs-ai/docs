@@ -1,55 +1,81 @@
-# Mintlify Starter Kit
+# BentoLabs docs
 
-Use the starter kit to get your docs deployed and ready to customize.
+Public documentation for the BentoLabs platform and SDKs. Built on [Mintlify](https://mintlify.com).
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+Live site: [docs.bentolabs.ai](https://docs.bentolabs.ai)
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+## Local development
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+Install the Mintlify CLI (requires Node 19 to 24, **not** Node 26+):
 
 ```bash
-npx skills add https://mintlify.com/docs
+npm install -g mint
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Preview locally:
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
-```
-
-Run the following command at the root of your documentation, where your `docs.json` is located:
-
-```
+```bash
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+Opens at `http://localhost:3000`. Hot-reloads on file save.
 
-## Publishing changes
+## Repo layout
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+```
+docs.json              Mintlify configuration (theme, navigation, SEO)
+index.mdx              Landing page
+quickstart.mdx         Three-step onboarding
+changelog.mdx          SDK release notes
+404.mdx                Not-found page
+concepts/              Cross-cutting docs (attribute mapping, troubleshooting)
+python/                Python SDK reference
+typescript/            TypeScript SDK reference
+snippets/              Reusable MDX fragments (imported via /snippets/<name>.mdx)
+logo/                  Light + dark brand marks
+images/                Static assets
+AGENTS.md              Contributor and style guide
+.github/workflows/     CI: validate, broken-links, a11y
+```
 
-## Need help?
+## Validation
 
-### Troubleshooting
+Before pushing:
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+```bash
+mint validate                                    # docs.json + MDX schema
+mint broken-links --check-anchors --check-snippets
+mint a11y                                        # alt text + contrast
+```
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+CI runs all three on every PR. See `.github/workflows/docs-ci.yml`.
+
+## Style
+
+Read `AGENTS.md` before editing. Top rules:
+
+- Active voice, second person
+- Sentence case headings
+- No em dashes (use period, comma, colon, or hyphen)
+- Bold for UI elements: Click **Settings**
+- Code formatting for file names, commands, paths
+
+## Reusable snippets
+
+Repeated content lives in `/snippets/`. Import with an absolute path:
+
+```mdx
+import InstallPython from "/snippets/install-python.mdx";
+
+<InstallPython />
+```
+
+Existing snippets: `install-python`, `install-typescript`, `install-sdk` (both), `api-key-setup`, `track-ai-canonical`.
+
+## Deployment
+
+Pushes to `main` deploy automatically via the Mintlify GitHub app. PRs get a preview URL.
+
+## Contact
+
+[support@bentolabs.ai](mailto:support@bentolabs.ai)

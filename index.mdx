@@ -1,97 +1,63 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "AI observability for production agents and LLM apps. Drop in an SDK, get traces, costs, and conversation timelines without managing OpenTelemetry yourself."
+icon: "house"
 ---
 
-## Setting up
+BentoLabs is an observability platform for AI applications. You add one SDK call where your model runs, and the dashboard handles the rest: multi-turn conversation timelines, cost and token breakdowns, tool-call traces, and per-user filtering.
 
-Get your documentation site up and running in minutes.
+## Why BentoLabs
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+You probably already have OpenTelemetry instrumentation somewhere. Bento doesn't replace it. The SDK ships as an OTLP span processor under the hood, so it slots into any existing tracer provider without conflicts. If you'd rather not think about OTel at all, the analytics layer (`bento.track_ai`, `bento.begin`, decorators) gives you a Raindrop-shaped API that's three lines of setup.
 
-## Make it yours
+The platform is opinionated about AI workloads: `gen_ai.*` semantic conventions are first-classed into dashboard columns, conversation IDs link multi-turn flows, and tool spans pick up automatic classification. No user profile storage, no SDK-side PII inference, no auto-tagging that gets things wrong.
 
-Design a docs site that looks great and empowers your users.
+## Start here
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Send your first AI event in under a minute.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Attribute mapping" icon="table" href="/concepts/attribute-mapping">
+    What each SDK kwarg becomes in the dashboard.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Pick your SDK
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="/python/installation">
+    `pip install bentolabs-sdk`. Full analytics surface: `track_ai`, trajectories, decorators.
+  </Card>
+  <Card title="TypeScript SDK" icon="js" href="/typescript/installation">
+    `npm install @bentolabs/sdk`. OTel span processor for Node.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## What you get
 
-## Need inspiration?
+<CardGroup cols={2}>
+  <Card title="Trace timeline" icon="timeline">
+    Multi-turn conversations and tool calls grouped into a single trace.
+  </Card>
+  <Card title="Cost and model breakdown" icon="chart-pie">
+    Token usage and spend by model, provider, user, or custom dimension.
+  </Card>
+  <Card title="User-level filtering" icon="user">
+    Filter and aggregate by your own `user_id`. No profile data stored.
+  </Card>
+  <Card title="OTel native" icon="cube">
+    Standard OTLP under the hood. Works alongside your existing tracing.
+  </Card>
+</CardGroup>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Need help
+
+<CardGroup cols={2}>
+  <Card title="Troubleshooting" icon="wrench" href="/concepts/troubleshooting">
+    What to check when nothing shows up.
+  </Card>
+  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
+    Recent SDK releases.
+  </Card>
+</CardGroup>

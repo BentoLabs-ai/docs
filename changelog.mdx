@@ -1,0 +1,28 @@
+---
+title: "Changelog"
+description: "Release notes for the BentoLabs SDKs."
+icon: "clock-rotate-left"
+---
+
+## Python SDK
+
+### 0.2.0
+
+- **Analytics convenience layer** (`bentolabs_sdk.analytics`): `track_ai`, `begin`, `flush`, `shutdown`, `init`.
+- **Trajectories** via `bento.begin(...)` with context-manager and imperative forms. LIFO finish guard raises `RuntimeError` on out-of-order close.
+- **Decorators**: `@bento.interaction` and `@bento.tool`. Both work on sync and async functions. `@bento.tool` auto-captures bound arguments and return value as `input.value` / `output.value`.
+- **Tool spans**: `bento.tool_span(...)` (module-level) and `interaction.tool_span(...)` (child of an open trajectory). Spans carry `openinference.span.kind="tool"` for downstream classification.
+- **Property type fidelity**: `int`, `float`, `bool`, `str`, and homogeneous lists keep their type. Dicts and mixed lists fall back to JSON string.
+- **Context isolation**: `track_ai` and `begin` detach from the caller's OTel context so they don't get pulled into customer FastAPI/Django traces.
+
+### 0.1.0
+
+- Initial release: `BentoLabsSpanProcessor`, `BentoLabsTraceExporter`, `resolve_options`, typed `BentoAuthError` with `code` field (`missing_api_key`, `invalid_api_key_format`, `already_initialized`).
+
+## TypeScript SDK
+
+### 0.1.0 (current)
+
+- `BentoLabsSpanProcessor` and `BentoLabsTraceExporter` for Node.js.
+- `resolveOptions`, `BentoAuthError`, env-var resolution via `BENTOLABS_API_KEY` and `BENTOLABS_BASE_URL`.
+- Higher-level analytics surface (`trackAi`, `begin`, decorators) planned for a later release.

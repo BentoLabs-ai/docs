@@ -1,0 +1,95 @@
+---
+title: "track_ai"
+description: "Emit one AI-interaction span. The primary entry point for the analytics layer."
+icon: "paper-plane"
+---
+
+```python
+import bentolabs_sdk.analytics as bento
+
+bento.track_ai(
+    event="user_message",
+    user_id="user_42",
+    input="What's the capital of France?",
+    output="Paris.",
+    model="claude-3-5-sonnet-20241022",
+    provider="anthropic",
+    convo_id="conv_abc",
+)
+```
+
+Each call ships one OTel span to BentoLabs. The span lands in your dashboard within seconds.
+
+## Signature
+
+<ParamField path="event" type="str" required>
+  Free-form event name. Becomes `span.name` in OTel and the row title in the dashboard.
+</ParamField>
+
+<ParamField path="user_id" type="str">
+  Your stable user identifier. Pass-through string only, no profile data is stored.
+</ParamField>
+
+<ParamField path="convo_id" type="str">
+  Conversation or session ID. Same value across all turns in one conversation links them in the timeline view.
+</ParamField>
+
+<ParamField path="model" type="str">
+  Model identifier, e.g. `claude-3-5-sonnet-20241022` or `gpt-4o`. Required for cost view and model breakdowns.
+</ParamField>
+
+<ParamField path="provider" type="str">
+  Provider key. One of `openai`, `anthropic`, `google`, `aws_bedrock`, etc. **Not** auto-inferred from model name.
+</ParamField>
+
+<ParamField path="input" type="str | dict | list">
+  The prompt or input. Strings pass through; dicts and lists are JSON-serialized.
+</ParamField>
+
+<ParamField path="output" type="str | dict | list">
+  The model output. Same serialization rules as `input`.
+</ParamField>
+
+<ParamField path="properties" type="dict">
+  Arbitrary custom dimensions. See [Properties](/python/properties).
+</ParamField>
+
+Returns: the span ID as a 16-character hex string. Useful for logging or correlating with downstream systems.
+
+## Multi-turn conversations
+
+Pass the same `convo_id` on every turn:
+
+```python
+convo = "conv_2026-05-10_user42"
+
+bento.track_ai(event="user_msg", input="Hi", convo_id=convo, user_id="u1")
+bento.track_ai(event="assistant_msg", output="Hello!", convo_id=convo, user_id="u1")
+bento.track_ai(event="user_msg", input="And then?", convo_id=convo, user_id="u1")
+```
+
+## Structured chat messages
+
+Dicts and lists are JSON-serialized into `input.value` / `output.value`:
+
+```python
+bento.track_ai(
+    event="chat",
+    input=[
+        {"role": "system", "content": "You are helpful."},
+        {"role": "user", "content": "Hi"},
+    ],
+    output={"role": "assistant", "content": "Hello!"},
+    user_id="u1",
+)
+```
+
+## Parenting
+
+`track_ai` calls are root spans by default. They detach from any caller's OTel context, so a `track_ai` inside a customer's FastAPI or Django span doesn't get pulled into that trace.
+
+When you call `track_ai` inside a [trajectory](/python/trajectories) opened with `bento.begin(...)`, the call becomes a child of the trajectory span instead.
+
+<Tip>
+  This isolation is intentional. Without it, a `track_ai` inside a customer's instrumented stack would ship a "child-only" OTLP batch and the ingest mapper would drop trace-level fields.
+</Tip>

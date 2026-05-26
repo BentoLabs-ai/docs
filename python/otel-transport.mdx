@@ -1,0 +1,95 @@
+---
+title: "OTel transport"
+description: "The lower-level surface. Wire BentoLabs into an existing OpenTelemetry pipeline."
+icon: "cube"
+---
+
+The analytics layer (`bentolabs_sdk.analytics`) sits on top of an OpenTelemetry `SpanProcessor`. If you already have an OTel pipeline configured for your app, you can wire the BentoLabs exporter into it directly and skip the analytics layer entirely.
+
+## When to use this
+
+Use the OTel transport directly when:
+
+- You already have a `TracerProvider` configured and don't want a second one.
+- You want to control batching, sampling, or resource attributes yourself.
+- You're using a framework (LangChain, LlamaIndex, OpenAI Agents SDK) that emits OTel spans and you just want to ship them.
+
+Use the [analytics layer](/python/track-ai) when you want the ergonomic `track_ai` / `begin` / decorator surface without managing OTel objects.
+
+## Install
+
+```bash
+pip install bentolabs-sdk opentelemetry-api opentelemetry-sdk
+```
+
+## Usage
+
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+from bentolabs_sdk import BentoLabsSpanProcessor
+
+provider = TracerProvider()
+provider.add_span_processor(BentoLabsSpanProcessor())
+trace.set_tracer_provider(provider)
+
+tracer = trace.get_tracer("example")
+with tracer.start_as_current_span("agent.run") as span:
+    span.set_attribute("input.value", "Summarize the incident")
+    span.set_attribute("output.value", "The incident is resolved.")
+
+provider.force_flush()
+provider.shutdown()
+```
+
+The processor batches spans with OpenTelemetry defaults and POSTs them to `${base_url}/v1/traces` with `Authorization: Bearer bl_pk_...`.
+
+## What ends up in the dashboard
+
+To get the same dashboard columns the analytics layer fills in, set these OTel attributes on your spans:
+
+| OTel attribute | Lands in | Set via |
+|---|---|---|
+| `span.name` | `spans.name` | `tracer.start_span(name)` |
+| `gen_ai.user.id` | `traces.user_id` | `span.set_attribute(...)` |
+| `gen_ai.conversation.id` | `traces.session_id` | `span.set_attribute(...)` |
+| `gen_ai.request.model` | `spans.model` | `span.set_attribute(...)` |
+| `gen_ai.system` | `spans.provider` | `span.set_attribute(...)` |
+| `input.value` | `spans.input` | `span.set_attribute(...)` |
+| `output.value` | `spans.output` | `span.set_attribute(...)` |
+| `openinference.span.kind="tool"` | `spans.kind = "tool"` | `span.set_attribute(...)` |
+
+See [attribute mapping](/concepts/attribute-mapping) for the full table.
+
+## Just the exporter
+
+If you want to wire a custom `SpanProcessor` (e.g. `SimpleSpanProcessor` for tests, or a `BatchSpanProcessor` with custom limits), use `BentoLabsTraceExporter` directly:
+
+```python
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+from bentolabs_sdk import BentoLabsTraceExporter
+
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(BentoLabsTraceExporter()))
+```
+
+## Errors at boot
+
+`BentoLabsSpanProcessor` and `BentoLabsTraceExporter` both resolve options at construction time, which can raise `BentoAuthError`:
+
+```python
+from bentolabs_sdk import BentoAuthError, BentoLabsSpanProcessor
+
+try:
+    processor = BentoLabsSpanProcessor(base_url="http://localhost:8080")
+except BentoAuthError as exc:
+    if exc.code == "missing_api_key":
+        # telemetry disabled or misconfigured
+        pass
+    raise
+```
+
+See [Configuration → Errors](/python/configuration#errors) for the full set of error codes.

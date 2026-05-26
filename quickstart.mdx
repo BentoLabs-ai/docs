@@ -1,80 +1,56 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Send your first AI event to BentoLabs in under a minute."
+icon: "bolt"
 ---
 
-## Get started in three steps
+import InstallSdk from "/snippets/install-sdk.mdx";
+import ApiKeySetup from "/snippets/api-key-setup.mdx";
+import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
 
-Get your documentation site running locally and make your first customization.
+<Tip>
+  **Building with an AI coding tool?** Use the menu in the top-right of any page to copy the page as markdown, open it in Claude / ChatGPT / Perplexity, or install these docs as an MCP server in Claude Code, Cursor, or VSCode (`Add MCP`). Your AI tool gets full context on the SDK without you copy-pasting.
+</Tip>
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Get an API key">
+    <ApiKeySetup />
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Install the SDK">
+    <InstallSdk />
 
-### Step 2: Deploy your changes
+    Or pass the key explicitly in code via `bento.init(api_key=...)` (Python) or `new BentoLabsSpanProcessor({ apiKey: ... })` (TypeScript).
+  </Step>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Step title="Send your first event">
+    <TrackAiCanonical />
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    The event lands in your dashboard within seconds.
+  </Step>
+</Steps>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## What to send
 
-### Step 3: Go live
+Each kwarg becomes one OTel span attribute, which our ingest first-classes into a column. **What you don't pass becomes invisible to that column.** See [attribute mapping](/concepts/attribute-mapping) for the full table.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Tip>
+  Pass `provider`, `convo_id`, `user_id`, and `model` on every call. Skipping any of them silently disables a dashboard feature.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Multi-step trajectories" icon="diagram-project" href="/python/trajectories">
+    Group multi-turn conversations and tool calls into one trace.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    Env vars, init lifecycle, and credential rotation.
+  </Card>
+  <Card title="Custom dimensions" icon="sliders" href="/python/properties">
+    Pass arbitrary properties through to span attributes.
+  </Card>
+  <Card title="Migrating from Raindrop" icon="arrow-right-arrow-left" href="/python/from-raindrop">
+    One-page mechanical translation.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
