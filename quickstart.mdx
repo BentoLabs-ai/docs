@@ -7,59 +7,6 @@ icon: "bolt"
 import InstallSdk from "/snippets/install-sdk.mdx";
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 
-<Steps>
-  <Step title="Get an API key">
-    <ApiKeySetup />
-  </Step>
-
-  <Step title="Install">
-    ```bash
-    pip install bentolabs-sdk
-    ```
-
-    Using Google ADK? Install the extra so Bento can capture every call automatically:
-
-    ```bash
-    pip install "bentolabs-sdk[adk]"
-    ```
-  </Step>
-
-  <Step title="Send your first trace">
-    Pick the one line of code that matches your stack.
-
-    **Google ADK** — capture everything in one line:
-
-    ```python
-    import bentolabs_sdk as bento
-
-    bento.init()
-    bento.instrument()
-
-    # Run your existing ADK agent. Bento captures it.
-    bento.flush()
-    ```
-
-    **Anything else** (OpenAI, Anthropic, Bedrock, Vertex, …) — wrap each LLM call site:
-
-    ```python
-    import bentolabs_sdk.analytics as bento
-
-    bento.track_ai(
-        event="user_message",
-        user_id="user_42",
-        convo_id="conv_abc",
-        model="gpt-4o",
-        provider="openai",
-        input="What's the capital of France?",
-        output="Paris.",
-    )
-    bento.flush()
-    ```
-
-    Open [platform.bentolabs.ai](https://platform.bentolabs.ai) — the trace lands within seconds.
-  </Step>
-</Steps>
-
 ## Set up with an AI coding tool
 
 <Prompt description="Install the Bento docs skill so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
@@ -179,6 +126,61 @@ import ApiKeySetup from "/snippets/api-key-setup.mdx";
     In Cascade, add a custom MCP server with URL `https://docs.bentolabs.ai/mcp`, then paste the prompt above.
   </Tab>
 </Tabs>
+
+## Or set it up manually
+
+<Steps>
+  <Step title="Get an API key">
+    <ApiKeySetup />
+  </Step>
+
+  <Step title="Install">
+    ```bash
+    pip install bentolabs-sdk
+    ```
+
+    Using Google ADK? Install the extra so Bento can capture every call automatically:
+
+    ```bash
+    pip install "bentolabs-sdk[adk]"
+    ```
+  </Step>
+
+  <Step title="Send your first trace">
+    Pick the one line of code that matches your stack.
+
+    **Google ADK** — capture everything in one line:
+
+    ```python
+    import bentolabs_sdk as bento
+
+    bento.init()
+    bento.instrument()
+
+    # Run your existing ADK agent. Bento captures it.
+    bento.flush()
+    ```
+
+    **Anything else** (OpenAI, Anthropic, Bedrock, Vertex, …) — wrap each LLM call site:
+
+    ```python
+    import bentolabs_sdk.analytics as bento
+
+    bento.track_ai(
+        event="user_message",
+        user_id="user_42",
+        convo_id="conv_abc",
+        model="gpt-4o",
+        provider="openai",
+        input="What's the capital of France?",
+        output="Paris.",
+    )
+    bento.flush()
+    ```
+
+    Open [platform.bentolabs.ai](https://platform.bentolabs.ai) — the trace lands within seconds.
+  </Step>
+</Steps>
 
 ## Next
 

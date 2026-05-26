@@ -6,6 +6,68 @@ icon: "download"
 
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 
+## Set up with an AI coding tool
+
+<Prompt description="Install the Bento docs skill so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate Bento into this project. Walk it step by step.
+
+  ## 0. Load context
+
+  ```bash
+  npx skills add https://docs.bentolabs.ai
+  ```
+
+  Read `https://docs.bentolabs.ai/python/installation` and `https://docs.bentolabs.ai/python/integrations` before writing any code. The TypeScript SDK is not yet GA — if this is a Node project, point me at `https://docs.bentolabs.ai/typescript` and stop.
+
+  ## 1. Discover
+
+  ```bash
+  ls pyproject.toml setup.py requirements*.txt 2>/dev/null
+  grep -rlE "from fastapi|from flask|django\.|from starlette" --include="*.py" . | head -5
+
+  # Decides the path
+  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+
+  # Other LLM SDKs (need bento.track_ai)
+  grep -rnE "openai\.|OpenAI\(|\.chat\.completions\.create" --include="*.py" .
+  grep -rnE "anthropic\.|Anthropic\(|\.messages\.create" --include="*.py" .
+  grep -rnE "bedrock-runtime|invoke_model|converse" --include="*.py" .
+  ```
+
+  Summarize: framework, whether ADK is present, other LLM call sites, env file location. Confirm before editing.
+
+  ## 2. Install
+
+  ```bash
+  pip install bentolabs-sdk
+  # ADK in use? pip install "bentolabs-sdk[adk]"
+  ```
+
+  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Point me at https://platform.bentolabs.ai if I don't have a key.
+
+  ## 3. Wire it up
+
+  If ADK is in use — three lines at startup:
+
+  ```python
+  import bentolabs_sdk as bento
+
+  bento.init(
+      user_id=lambda: get_current_user_id(),
+      session_id=lambda: get_current_session_id(),
+  )
+  bento.instrument()
+  ```
+
+  Bind the getters to whatever holds request-scoped identity (a ContextVar set by middleware, `request.state.user.id`, `g.user.id`).
+
+  For anything not covered, wrap each LLM call site with `bento.track_ai(event=, user_id=, convo_id=, model=, provider=, input=, output=)`. Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
+
+  ## 4. Verify
+
+  Run one real flow. Open https://platform.bentolabs.ai and confirm a row appears with model, user, session, input, and output populated. Empty columns → re-check Step 3 for that call site. For short scripts, call `bento.flush()` before exit.
+</Prompt>
+
 ## Requirements
 
 Python 3.10 or higher.
