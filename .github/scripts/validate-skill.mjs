@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Validate skill.md against the Anthropic Agent Skills spec.
+// Validate SKILL.md against the Anthropic Agent Skills spec.
 //
-// Run with:  node .github/scripts/validate-skill.mjs skill.md
+// Run with:  node .github/scripts/validate-skill.mjs SKILL.md
 //
 // Checks:
 //   - File exists and has YAML frontmatter
@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const file = process.argv[2] ?? "skill.md";
+const file = process.argv[2] ?? "SKILL.md";
 const abs = path.resolve(file);
 
 if (!fs.existsSync(abs)) {
@@ -85,13 +85,13 @@ console.log(`body fenced code blocks: ${codeBlocks}`);
 
 if (problems.length > 0) {
   console.error("");
-  console.error("skill.md validation failed:");
+  console.error("SKILL.md validation failed:");
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
 
 console.log("");
-console.log("skill.md is valid");
+console.log("SKILL.md is valid");
 process.exit(0);
 
 function matchOne(s, re) {
@@ -100,6 +100,6 @@ function matchOne(s, re) {
 }
 
 function fail(msg) {
-  console.error(`skill.md validation failed: ${msg}`);
+  console.error(`SKILL.md validation failed: ${msg}`);
   process.exit(1);
 }
