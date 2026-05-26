@@ -4,13 +4,13 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'skill.md'
+      - 'SKILL.md'
       - '.github/workflows/skill-publish.yml'
       - '.github/scripts/validate-skill.mjs'
   push:
     branches: [main]
     paths:
-      - 'skill.md'
+      - 'SKILL.md'
       - '.github/workflows/skill-publish.yml'
       - '.github/scripts/validate-skill.mjs'
   workflow_dispatch:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate skill.md
+    name: Validate SKILL.md
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,8 +31,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Lint skill.md (frontmatter spec, body length, structure)
-        run: node .github/scripts/validate-skill.mjs skill.md
+      - name: Lint SKILL.md (frontmatter spec, body length, structure)
+        run: node .github/scripts/validate-skill.mjs SKILL.md
 
       - name: Probe skills CLI against the working tree
         env:
@@ -63,7 +63,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Wait for Mintlify deploy to reflect the committed skill.md
+      - name: Wait for Mintlify deploy to reflect the committed SKILL.md
         env:
           DOCS_URL: https://docs.bentolabs.ai
           DEPLOY_TIMEOUT_SECONDS: '600'
@@ -71,8 +71,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          REPO_NAME=$(awk '/^name:/{print $2; exit}' skill.md)
-          REPO_DESC_HEAD=$(awk '/^description:/{print substr($0, 14, 80); exit}' skill.md)
+          REPO_NAME=$(awk '/^name:/{print $2; exit}' SKILL.md)
+          REPO_DESC_HEAD=$(awk '/^description:/{print substr($0, 14, 80); exit}' SKILL.md)
           echo "Repo skill: name='${REPO_NAME}' desc-head='${REPO_DESC_HEAD}'"
 
           deadline=$(( $(date +%s) + DEPLOY_TIMEOUT_SECONDS ))
@@ -115,7 +115,7 @@ jobs:
           {
             echo "### Skill published"
             echo ""
-            echo "- Source: skill.md (repo root)"
+            echo "- Source: SKILL.md (repo root)"
             echo "- Served at: https://docs.bentolabs.ai/skill.md"
             echo "- Install (URL form): \`npx skills add https://docs.bentolabs.ai\`"
             echo "- Install (repo form): \`npx skills add BentoLabs-ai/docs\`"

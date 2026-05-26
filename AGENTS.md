@@ -91,8 +91,8 @@ For component reference, configuration, and writing standards, install the Mintl
 npx skills add https://mintlify.com/docs
 ```
 
-## Authoring the BentoLabs `skill.md`
+## Authoring the BentoLabs `SKILL.md`
 
-The repo ships a `skill.md` at root. Mintlify serves it verbatim at `https://docs.bentolabs.ai/skill.md`, overriding the auto-generated default. That URL is what `npx skills add https://docs.bentolabs.ai` reads, so the file is the public install surface for the BentoLabs agent skill.
+The repo ships a `SKILL.md` at root. Mintlify serves it at `https://docs.bentolabs.ai/skill.md` (lowercase URL is auto-handled), overriding the auto-generated default. That URL is what `npx skills add https://docs.bentolabs.ai` reads, so the file is the public install surface for the BentoLabs agent skill. The uppercase filename also satisfies the canonical Anthropic Agent Skills spec, so `npx skills add BentoLabs-ai/docs` (the repo-install form) finds it too.
 
-Keep the frontmatter `description` accurate and full of trigger phrases. It is the only signal Claude uses to decide whether to load the skill into context. Body stays tight (under ~5 KB rendered); deeper detail lives in the per-page `.md` URLs the body links to. Do not delete `skill.md` thinking it is unused.
+Keep the frontmatter `description` accurate and full of trigger phrases. It is the only signal Claude uses to decide whether to load the skill into context. Body stays tight (under ~5 KB rendered); deeper detail lives in the per-page `.md` URLs the body links to. Do not delete `SKILL.md` thinking it is unused.
