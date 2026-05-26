@@ -1,0 +1,120 @@
+name: skill-publish
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skill.md'
+      - '.github/workflows/skill-publish.yml'
+      - '.github/scripts/validate-skill.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'skill.md'
+      - '.github/workflows/skill-publish.yml'
+      - '.github/scripts/validate-skill.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skill.md
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Lint skill.md (frontmatter spec, body length, structure)
+        run: node .github/scripts/validate-skill.mjs skill.md
+
+      - name: Probe skills CLI against the working tree
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/skill-probe
+          cd /tmp/skill-probe
+          npx --yes skills@latest add "$WORKSPACE" --list 2>&1 | tee probe.log
+          grep -Eq '^\s*│?\s*bentolabs\b' probe.log || {
+            echo "::error::skills CLI did not detect the 'bentolabs' skill at the repo root"
+            exit 1
+          }
+
+  verify-deploy:
+    name: Verify deployed skill on docs.bentolabs.ai
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Wait for Mintlify deploy to reflect the committed skill.md
+        env:
+          DOCS_URL: https://docs.bentolabs.ai
+          DEPLOY_TIMEOUT_SECONDS: '600'
+          POLL_INTERVAL_SECONDS: '20'
+        run: |
+          set -euo pipefail
+
+          REPO_NAME=$(awk '/^name:/{print $2; exit}' skill.md)
+          REPO_DESC_HEAD=$(awk '/^description:/{print substr($0, 14, 80); exit}' skill.md)
+          echo "Repo skill: name='${REPO_NAME}' desc-head='${REPO_DESC_HEAD}'"
+
+          deadline=$(( $(date +%s) + DEPLOY_TIMEOUT_SECONDS ))
+          served_name=""
+          served_desc_head=""
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            served=$(curl -fsS "${DOCS_URL}/skill.md" || true)
+            served_name=$(printf "%s" "$served" | awk '/^name:/{print $2; exit}')
+            served_desc_head=$(printf "%s" "$served" | awk '/^description:/{print substr($0, 14, 80); exit}')
+
+            if [ "$served_name" = "$REPO_NAME" ] && [ "$served_desc_head" = "$REPO_DESC_HEAD" ]; then
+              echo "Deployed skill.md matches repo (name and description head)"
+              exit 0
+            fi
+            echo "Still waiting. Served name='${served_name:-<empty>}' desc-head='${served_desc_head:-<empty>}'. Sleeping ${POLL_INTERVAL_SECONDS}s."
+            sleep "$POLL_INTERVAL_SECONDS"
+          done
+
+          echo "::error::Deployed skill.md never matched repo within ${DEPLOY_TIMEOUT_SECONDS}s. Check the Mintlify deploy."
+          echo "::group::Last served skill.md (first 40 lines)"
+          printf "%s\n" "$served" | head -40
+          echo "::endgroup::"
+          exit 1
+
+      - name: Smoke-test the public install command
+        env:
+          DOCS_URL: https://docs.bentolabs.ai
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/skill-public-probe
+          cd /tmp/skill-public-probe
+          npx --yes skills@latest add "$DOCS_URL" --list 2>&1 | tee probe.log
+          grep -Eq '^\s*│?\s*bentolabs\b' probe.log || {
+            echo "::error::Public 'npx skills add $DOCS_URL' did not list bentolabs"
+            exit 1
+          }
+
+      - name: Job summary
+        run: |
+          {
+            echo "### Skill published"
+            echo ""
+            echo "- Source: skill.md (repo root)"
+            echo "- Served at: https://docs.bentolabs.ai/skill.md"
+            echo "- Install (URL form): \`npx skills add https://docs.bentolabs.ai\`"
+            echo "- Install (repo form): \`npx skills add BentoLabs-ai/docs\`"
+          } >> "$GITHUB_STEP_SUMMARY"
