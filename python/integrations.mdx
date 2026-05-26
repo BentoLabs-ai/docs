@@ -1,0 +1,113 @@
+---
+title: "Google ADK"
+description: "Capture every model call, tool call, and agent step from a Google ADK app with one line."
+icon: "google"
+---
+
+If your app uses **Google ADK**, Bento captures every model call, tool call, and agent run for you. No per-call code.
+
+```python
+import bentolabs_sdk as bento
+
+bento.init(
+    user_id=lambda: get_current_user_id(),
+    session_id=lambda: get_current_session_id(),
+)
+bento.instrument()
+```
+
+That's the whole integration. Run your app — the dashboard fills in immediately.
+
+<Note>
+  For LLM SDKs without an integration (OpenAI, Anthropic, Bedrock, Vertex, etc.), use [`bento.track_ai`](/python/track-ai). The two paths mix freely in the same app.
+</Note>
+
+## Install
+
+```bash
+pip install "bentolabs-sdk[adk]"
+```
+
+The `[adk]` extra pulls in the [OpenInference](https://github.com/Arize-ai/openinference) tracer for ADK. The base wheel stays small; you only pay for what you use.
+
+## `bento.instrument()`
+
+Call this once, at app startup — after `bento.init(...)`, before any LLM call.
+
+```python
+bento.instrument()           # auto-detects ADK
+bento.instrument("adk")      # explicit
+```
+
+Returns `"adk"` when activated, or `None` when the `[adk]` extra isn't installed. The call is safe to make more than once: a repeat with the same target is a no-op.
+
+| Behavior | What happens |
+|---|---|
+| Auto-detect (no argument) | Activates ADK if it's installed. |
+| Explicit name (`"adk"`) | Activates ADK. Raises `ValueError` on unknown names; logs a warning and returns `None` if the extra is missing. |
+| Already active | No-op. A second call with a different target logs a warning and is ignored. |
+
+`bento.shutdown()` removes every active integration on the way out.
+
+## Identity at init
+
+To stamp every captured span with `user_id`, `session_id`, and `tags` without threading them through your code, pass getters to `bento.init(...)`:
+
+```python
+bento.init(
+    user_id=lambda: get_current_user_id(),
+    session_id=lambda: get_current_session_id(),
+    tags=lambda: ["env:prod"],
+)
+```
+
+A getter is any zero-argument callable. Bento calls it on every span and writes the result. Three common patterns:
+
+```python
+# FastAPI / Starlette
+bento.init(user_id=lambda: Request.scope["state"].user_id)
+
+# Your own ContextVar
+from contextvars import ContextVar
+current_user: ContextVar[str | None] = ContextVar("current_user", default=None)
+bento.init(user_id=current_user.get)
+
+# Flask / Django
+bento.init(user_id=lambda: g.user.id if g.user.is_authenticated else None)
+```
+
+If a getter raises, Bento drops the field for that span and your app keeps running. Telemetry never breaks the host.
+
+For more, see [Configuration → Identity getters](/python/configuration#identity-getters).
+
+## Adding custom events
+
+For ad-hoc events alongside the integration — a custom event before or after a model call, an event for a step ADK doesn't emit — wrap each one with [`bento.track_ai`](/python/track-ai). The integration's spans and your manual ones land in the same dashboard.
+
+If you need a single trace to span multiple LLM and tool calls within one turn, see [Trajectories](/python/trajectories) (advanced).
+
+## Reference
+
+| Function | Effect |
+|---|---|
+| `bento.instrument()` | Auto-detect and activate ADK. Returns `"adk"` or `None`. |
+| `bento.instrument("adk")` | Activate by name. Raises `ValueError` on unknown names. |
+| `bento.uninstrument()` | Remove every active integration. Returns the names removed. |
+| `bento.uninstrument("adk")` | Remove ADK specifically. |
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Manual tracking" icon="paper-plane" href="/python/track-ai">
+    `bento.track_ai` for SDKs without an integration.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    `init()`, identity getters, env vars, lifecycle.
+  </Card>
+  <Card title="Trajectories" icon="diagram-project" href="/python/trajectories">
+    Group multi-step work into one trace.
+  </Card>
+  <Card title="OTel transport" icon="cube" href="/python/otel-transport">
+    Wire Bento into an existing OpenTelemetry pipeline.
+  </Card>
+</CardGroup>

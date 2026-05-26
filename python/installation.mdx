@@ -1,31 +1,54 @@
 ---
 title: "Installation"
-description: "Install the BentoLabs Python SDK and verify it sends events."
+description: "Install the Bento Python SDK and send a test trace."
 icon: "download"
 ---
 
-import InstallPython from "/snippets/install-python.mdx";
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 
 ## Requirements
 
-- Python 3.10 or higher
+Python 3.10 or higher.
 
 ## Install
 
-<InstallPython />
+```bash
+pip install bentolabs-sdk
+```
 
-The analytics layer (`bentolabs_sdk.analytics`) brings its own OpenTelemetry dependencies. You don't need to install `opentelemetry-api` or `opentelemetry-sdk` separately unless you want to use the [lower-level OTel transport](/python/otel-transport).
+If you use **Google ADK**, install the extra so Bento can capture every call automatically:
+
+```bash
+pip install "bentolabs-sdk[adk]"
+```
+
+The base wheel ships its own OpenTelemetry dependencies. You don't need to install `opentelemetry-api` or `opentelemetry-sdk` separately.
 
 ## Set your API key
 
 <ApiKeySetup />
 
 <Tip>
-  Prefer setting the key via environment variable in production. For local development or notebooks, pass it explicitly via `bento.init(api_key=...)`.
+  In production, set the key via environment variable. For local development or notebooks, pass it in code: `bento.init(api_key="bl_pk_...")`.
 </Tip>
 
-## Verify your install
+## Send a test trace
+
+Pick the one that matches your stack.
+
+**Google ADK:**
+
+```python
+import bentolabs_sdk as bento
+
+bento.init()
+bento.instrument()
+
+# Run any ADK agent. Bento captures it.
+bento.flush()
+```
+
+**Anything else:**
 
 ```python
 import bentolabs_sdk.analytics as bento
@@ -33,25 +56,30 @@ import bentolabs_sdk.analytics as bento
 bento.track_ai(
     event="hello_world",
     user_id="test_user",
+    convo_id="conv_test",
+    model="gpt-4o",
+    provider="openai",
     input="ping",
     output="pong",
-    model="claude-3-5-sonnet-20241022",
-    provider="anthropic",
-    convo_id="conv_test",
 )
-
 bento.flush()
 ```
 
-Run the script, then check your dashboard. You should see one trace within seconds.
+Open [platform.bentolabs.ai](https://platform.bentolabs.ai). The trace lands within seconds.
 
-## What's next
+## Next
 
 <CardGroup cols={2}>
-  <Card title="Configuration" icon="gear" href="/python/configuration">
-    Env vars, `init()`, and lifecycle hooks.
+  <Card title="Integrations" icon="plug" href="/python/integrations">
+    Trace Google ADK with one line.
   </Card>
-  <Card title="track_ai" icon="paper-plane" href="/python/track-ai">
-    The full event API.
+  <Card title="Manual tracking" icon="paper-plane" href="/python/track-ai">
+    Wrap OpenAI / Anthropic / Bedrock / Vertex calls.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    Identity getters, env vars, lifecycle.
+  </Card>
+  <Card title="Custom properties" icon="sliders" href="/python/properties">
+    Tag spans with experiment IDs, feature flags, anything.
   </Card>
 </CardGroup>

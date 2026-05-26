@@ -1,52 +1,145 @@
 ---
 title: "Quickstart"
-description: "Send your first AI event to BentoLabs in under a minute."
+description: "Install Bento, send your first trace, see it in the dashboard."
 icon: "bolt"
 ---
 
 import InstallSdk from "/snippets/install-sdk.mdx";
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
-import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
 
-<Prompt description="Install the BentoLabs docs skill and MCP server so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
-  Help me integrate the BentoLabs SDK into this project.
+<Steps>
+  <Step title="Get an API key">
+    <ApiKeySetup />
+  </Step>
 
-  1. Install the BentoLabs skill so you have the BentoLabs docs as context:
-     `npx skills add https://docs.bentolabs.ai`
-  2. Detect whether this project is Python or TypeScript and install the matching SDK package (`bentolabs-sdk` or `@bentolabs/sdk`).
-  3. Read `https://docs.bentolabs.ai/quickstart` and `https://docs.bentolabs.ai/concepts/attributes`.
-  4. Find the main LLM call sites in this codebase and wrap them with `bento.track_ai(...)` (Python) or the OTel span pattern (TypeScript), passing `event`, `user_id`, `convo_id`, `model`, `provider`, `input`, and `output`.
-  5. Add `BENTOLABS_API_KEY` to the project's environment configuration. Tell me where to get a key (https://platform.bentolabs.ai) if it isn't set.
-  6. For multi-step or tool-calling flows, wrap them in `bento.begin(...)` trajectories so the dashboard shows them as one trace.
+  <Step title="Install">
+    ```bash
+    pip install bentolabs-sdk
+    ```
+
+    Using Google ADK? Install the extra so Bento can capture every call automatically:
+
+    ```bash
+    pip install "bentolabs-sdk[adk]"
+    ```
+  </Step>
+
+  <Step title="Send your first trace">
+    Pick the one line of code that matches your stack.
+
+    **Google ADK** — capture everything in one line:
+
+    ```python
+    import bentolabs_sdk as bento
+
+    bento.init()
+    bento.instrument()
+
+    # Run your existing ADK agent. Bento captures it.
+    bento.flush()
+    ```
+
+    **Anything else** (OpenAI, Anthropic, Bedrock, Vertex, …) — wrap each LLM call site:
+
+    ```python
+    import bentolabs_sdk.analytics as bento
+
+    bento.track_ai(
+        event="user_message",
+        user_id="user_42",
+        convo_id="conv_abc",
+        model="gpt-4o",
+        provider="openai",
+        input="What's the capital of France?",
+        output="Paris.",
+    )
+    bento.flush()
+    ```
+
+    Open [platform.bentolabs.ai](https://platform.bentolabs.ai) — the trace lands within seconds.
+  </Step>
+</Steps>
+
+## Set up with an AI coding tool
+
+<Prompt description="Install the Bento docs skill so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate Bento into this project. Walk it step by step.
+
+  ## 0. Load context
+
+  ```bash
+  npx skills add https://docs.bentolabs.ai
+  ```
+
+  Read `https://docs.bentolabs.ai/quickstart` and `https://docs.bentolabs.ai/python/integrations` before writing any code. The TypeScript SDK is not yet GA — if this is a Node project, point me at `https://docs.bentolabs.ai/typescript` and stop.
+
+  ## 1. Discover
+
+  ```bash
+  ls pyproject.toml setup.py requirements*.txt 2>/dev/null
+  grep -rlE "from fastapi|from flask|django\.|from starlette" --include="*.py" . | head -5
+
+  # Decides the path
+  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+
+  # Other LLM SDKs (need bento.track_ai)
+  grep -rnE "openai\.|OpenAI\(|\.chat\.completions\.create" --include="*.py" .
+  grep -rnE "anthropic\.|Anthropic\(|\.messages\.create" --include="*.py" .
+  grep -rnE "bedrock-runtime|invoke_model|converse" --include="*.py" .
+  ```
+
+  Summarize: framework, whether ADK is present, other LLM call sites, env file location. Confirm before editing.
+
+  ## 2. Install
+
+  ```bash
+  pip install bentolabs-sdk
+  # ADK in use? pip install "bentolabs-sdk[adk]"
+  ```
+
+  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Point me at https://platform.bentolabs.ai if I don't have a key.
+
+  ## 3. Wire it up
+
+  If ADK is in use — three lines at startup (FastAPI lifespan, Django `apps.py:ready()`, or the worker entry-point):
+
+  ```python
+  import bentolabs_sdk as bento
+
+  bento.init(
+      user_id=lambda: get_current_user_id(),
+      session_id=lambda: get_current_session_id(),
+  )
+  bento.instrument()
+  ```
+
+  Bind the getters to whatever holds request-scoped identity (a ContextVar set by middleware, `request.state.user.id`, `g.user.id`).
+
+  For anything else, wrap each LLM call site with `bento.track_ai(event=, user_id=, convo_id=, model=, provider=, input=, output=)`. Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
+
+  ## 4. Verify
+
+  Run one real flow. Open https://platform.bentolabs.ai and confirm a row appears with model, user, session, input, and output populated. Empty columns → re-check Step 3 for that call site. For short scripts, call `bento.flush()` before exit.
 </Prompt>
 
 ### Other AI coding tools
 
 <Tabs>
   <Tab title="Claude Code">
-    Install the skill so Claude Code reads the docs as context:
-
     ```bash
     npx skills add https://docs.bentolabs.ai
-    ```
-
-    Optionally add the docs as an MCP server for live queries:
-
-    ```bash
     claude mcp add --transport http bentolabs-docs https://docs.bentolabs.ai/mcp
     ```
 
-    Then run `claude` in your project and paste the prompt from the card above.
+    Run `claude` in your project and paste the prompt above.
   </Tab>
 
   <Tab title="Codex">
-    Install the skill:
-
     ```bash
     npx skills add https://docs.bentolabs.ai
     ```
 
-    Add the docs MCP to your `~/.codex/config.toml`:
+    Add to `~/.codex/config.toml`:
 
     ```toml
     [mcp_servers.bentolabs-docs]
@@ -54,17 +147,15 @@ import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
     url = "https://docs.bentolabs.ai/mcp"
     ```
 
-    Start `codex` in your project and paste the prompt from the card above.
+    Start `codex` and paste the prompt above.
   </Tab>
 
   <Tab title="OpenCode">
-    Install the skill:
-
     ```bash
     npx skills add https://docs.bentolabs.ai
     ```
 
-    Add the docs MCP to your `opencode.json`:
+    Add to `opencode.json`:
 
     ```json
     {
@@ -77,59 +168,34 @@ import TrackAiCanonical from "/snippets/track-ai-canonical.mdx";
     }
     ```
 
-    Run `opencode` and paste the prompt from the card above.
+    Run `opencode` and paste the prompt above.
   </Tab>
 
   <Tab title="Windsurf">
-    Install the skill:
-
     ```bash
     npx skills add https://docs.bentolabs.ai
     ```
 
-    In Windsurf, open the Cascade panel, add a custom MCP server with URL `https://docs.bentolabs.ai/mcp`, then paste the prompt from the card above.
+    In Cascade, add a custom MCP server with URL `https://docs.bentolabs.ai/mcp`, then paste the prompt above.
   </Tab>
 </Tabs>
 
-<Steps>
-  <Step title="Get an API key">
-    <ApiKeySetup />
-  </Step>
-
-  <Step title="Install the SDK">
-    <InstallSdk />
-
-    Or pass the key explicitly in code via `bento.init(api_key=...)` (Python) or `new BentoLabsSpanProcessor({ apiKey: ... })` (TypeScript).
-  </Step>
-
-  <Step title="Send your first event">
-    <TrackAiCanonical />
-
-    The event lands in your dashboard within seconds.
-  </Step>
-</Steps>
-
-## What to send
-
-Each kwarg becomes one OTel span attribute, which our ingest first-classes into a column. **What you don't pass becomes invisible to that column.** See [attribute mapping](/concepts/attributes) for the full table.
-
-<Tip>
-  Pass `provider`, `convo_id`, `user_id`, and `model` on every call. Skipping any of them silently disables a dashboard feature.
-</Tip>
-
-## Next steps
+## Next
 
 <CardGroup cols={2}>
-  <Card title="Multi-step trajectories" icon="diagram-project" href="/python/trajectories">
-    Group multi-turn conversations and tool calls into one trace.
+  <Card title="Integrations" icon="plug" href="/python/integrations">
+    Capture Google ADK with one line.
+  </Card>
+  <Card title="Manual tracking" icon="paper-plane" href="/python/track-ai">
+    Wrap individual LLM calls with `bento.track_ai`.
   </Card>
   <Card title="Configuration" icon="gear" href="/python/configuration">
-    Env vars, init lifecycle, and credential rotation.
+    Env vars, identity getters, lifecycle.
   </Card>
-  <Card title="Custom dimensions" icon="sliders" href="/python/properties">
-    Pass arbitrary properties through to span attributes.
+  <Card title="From Langfuse" icon="/images/langfuse.svg" href="/migrations/langfuse">
+    Mechanical translation guide.
   </Card>
-  <Card title="Migrating from Raindrop" icon="arrow-right-arrow-left" href="/python/from-raindrop">
-    One-page mechanical translation.
+  <Card title="From Raindrop" icon="/images/raindrop.svg" href="/migrations/raindrop">
+    Mechanical translation guide.
   </Card>
 </CardGroup>

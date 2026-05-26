@@ -1,0 +1,244 @@
+---
+title: "From Langfuse"
+description: "Mechanical translation from the Langfuse Python SDK to Bento."
+icon: "/images/langfuse.svg"
+---
+
+Both SDKs are built on OpenTelemetry, so most of your code maps over directly.
+
+## Migrate with an AI coding tool
+
+<Prompt description="Install the Bento docs skill so your AI coding tool has full context." actions={["copy"]}>
+  Help me migrate this project from Langfuse to Bento. Walk it step by step.
+
+  ## 0. Load context
+
+  ```bash
+  npx skills add https://docs.bentolabs.ai
+  ```
+
+  Read `https://docs.bentolabs.ai/migrations/langfuse` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
+
+  ## 1. Discover
+
+  ```bash
+  grep -rnE "from langfuse|import langfuse|langfuse\." --include="*.py" .
+  grep -rnE "@observe|from langfuse\.(openai|langchain)" --include="*.py" .
+  grep -rnE "propagate_attributes|update_current_trace|langfuse\.(score|get_prompt|flush)" --include="*.py" .
+  grep -rnE "LANGFUSE_(PUBLIC|SECRET)_KEY|LANGFUSE_HOST" .
+  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+  ```
+
+  Summarize the Langfuse features in use and whether ADK is present. Confirm before editing.
+
+  ## 2. Install Bento alongside Langfuse
+
+  ```bash
+  pip install bentolabs-sdk
+  # ADK detected? pip install "bentolabs-sdk[adk]"
+  ```
+
+  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Langfuse yet.
+
+  ## 3. Pick the smoothest path, then fall through
+
+  - **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
+  - **Path B — `langfuse.openai` or `langfuse.langchain` in use?** Replace with `openinference-instrumentation-<openai|langchain|anthropic|bedrock>` registered against a `BentoLabsSpanProcessor`. Call sites untouched.
+  - **Path C — translate the rest manually** per the table at `/migrations/langfuse`. `@observe()` → `@bento.interaction` / `@bento.tool`. `update_current_trace(metadata=)` → `update_current_trace(properties=)`. Drop `langfuse.score`, `langfuse.get_prompt`, datasets — no equivalents.
+
+  On `bento.track_ai` the kwarg is `convo_id=`, not `session_id=`. Same attribute under the hood.
+
+  ## 4. Verify
+
+  Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `session_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
+
+  ## 5. Remove Langfuse
+
+  Only after verify passes:
+
+  ```bash
+  pip uninstall langfuse
+  ```
+
+  Drop the `LANGFUSE_*` env vars.
+</Prompt>
+
+## The three paths
+
+Pick the smoothest applicable one and fall through. Most migrations end up using **B** for the bulk and **C** for a handful of bespoke decorators.
+
+| Path | When | Effort |
+|---|---|---|
+| [A — Google ADK integration](#path-a-google-adk-integration) | ADK is in use | 3 lines at startup |
+| [B — Auto-capture with OpenInference](#path-b-auto-capture-with-openinference) | `langfuse.openai`, `langfuse.langchain`, Anthropic via instrumentor | Drop one import, register one instrumentor |
+| [C — Manual translation](#path-c-manual-translation) | Bespoke `@observe`, `start_as_current_observation`, custom spans | Per-call-site rename |
+
+---
+
+## Path A: Google ADK integration
+
+If your app runs Google ADK agents, this captures every model call, tool call, and agent step automatically.
+
+```bash
+pip install "bentolabs-sdk[adk]"
+```
+
+```python
+import bentolabs_sdk as bento
+
+bento.init(
+    user_id=lambda: get_current_user_id(),
+    session_id=lambda: get_current_session_id(),
+)
+bento.instrument()
+```
+
+That's it. Full reference: [Integrations](/python/integrations).
+
+---
+
+## Path B: Auto-capture with OpenInference
+
+Langfuse's `from langfuse.openai import OpenAI` (and the `langfuse.langchain.CallbackHandler`) get replaced by an OpenInference instrumentor registered against a `BentoLabsSpanProcessor`. **Your call sites stay untouched** — every LLM call is captured at the SDK level.
+
+```bash
+pip install openinference-instrumentation-openai
+# Other libs as needed: -anthropic, -langchain, -bedrock, -llama-index
+```
+
+```python
+from openinference.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
+
+from bentolabs_sdk import BentoLabsSpanProcessor
+
+provider = TracerProvider()
+provider.add_span_processor(BentoLabsSpanProcessor())
+trace.set_tracer_provider(provider)
+
+OpenAIInstrumentor().instrument(tracer_provider=provider)
+```
+
+Now replace `from langfuse.openai import OpenAI` with the stock import — the instrumentor wraps the client automatically:
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+resp = client.chat.completions.create(model="gpt-4o", messages=[...])
+# Bento captures the call. Nothing else to do.
+```
+
+For LangChain: drop the `CallbackHandler` and register `LangChainInstrumentor()` the same way. For Anthropic / Bedrock: install the matching `openinference-instrumentation-*` and register it.
+
+Full reference: [OTel transport](/python/otel-transport).
+
+---
+
+## Path C: Manual translation
+
+For bespoke `@observe()` decorators, manual context managers, and identity helpers, translate per the tables.
+
+### Setup
+
+| Langfuse | Bento |
+|---|---|
+| `pip install langfuse` | `pip install bentolabs-sdk` |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | `BENTOLABS_API_KEY` |
+| `Langfuse(...)` / `get_client()` | `bento.init(api_key=...)` |
+| `langfuse.flush()` | `bento.flush()` |
+
+### Decorators
+
+| Langfuse | Bento |
+|---|---|
+| `@observe()` on a handler | `@bento.interaction` |
+| `@observe()` on a tool | `@bento.tool` |
+| `@observe(as_type="generation", ...)` | Replace body with `bento.track_ai(...)` |
+
+### Multi-step / context managers
+
+| Langfuse | Bento |
+|---|---|
+| `start_as_current_observation(as_type="span", ...)` | `with bento.begin(...) as t:` |
+| Nested `as_type="span"` (tool) | `t.tool_span(...)` |
+
+### Identity
+
+| Langfuse | Bento |
+|---|---|
+| `update_current_trace(...)` | `bento.update_current_trace(...)` |
+| `update_current_observation(...)` | `bento.update_current_span(...)` |
+| `propagate_attributes(...)` | `bento.propagate_attributes(...)` |
+
+### What's gone
+
+| Langfuse | Where it goes |
+|---|---|
+| `langfuse.score(...)` | `bento.update_current_trace(properties={"score_<name>": value})` |
+| `langfuse.get_prompt(...)` | Move prompts to code or config; stash version in `properties` |
+| Datasets / dataset runs | No primitive yet |
+
+---
+
+## Watch out for
+
+- **`session_id` vs `convo_id`.** Bento uses `session_id` everywhere except `bento.track_ai`, which uses `convo_id`. Same attribute under the hood.
+- **`metadata` → `properties`.** Direct rename. Langfuse magic keys (`langfuse_user_id`, etc.) don't exist; use the real kwargs.
+- **No OpenAI drop-in.** Use Path B (OpenInference) instead of trying to find a `from bento.openai import OpenAI` equivalent.
+
+## Side-by-side
+
+```python Langfuse
+from langfuse import observe, propagate_attributes
+from langfuse.openai import OpenAI
+
+client = OpenAI()
+
+@observe()
+def answer(user_id, session_id, question):
+    with propagate_attributes(user_id=user_id, session_id=session_id, tags=["prod"]):
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": question}],
+            name="answer-llm",
+        )
+        return resp.choices[0].message.content
+```
+
+```python Bento
+import bentolabs_sdk as bento
+from openai import OpenAI
+
+bento.init(api_key="bl_pk_...")
+client = OpenAI()
+
+@bento.interaction
+def answer(user_id, session_id, question):
+    with bento.propagate_attributes(user_id=user_id, session_id=session_id, tags=["prod"]):
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": question}],
+        )
+        reply = resp.choices[0].message.content
+        bento.track_ai(
+            event="answer-llm",
+            model="gpt-4o-mini",
+            provider="openai",
+            input=question,
+            output=reply,
+        )
+        return reply
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    `init()`, identity getters, env vars.
+  </Card>
+  <Card title="Tracking events" icon="code" href="/python/track-ai">
+    The `bento.track_ai` reference.
+  </Card>
+</CardGroup>

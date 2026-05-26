@@ -1,8 +1,10 @@
 ---
-title: "track_ai"
-description: "Emit one AI-interaction span. The primary entry point for the analytics layer."
-icon: "paper-plane"
+title: "Tracking events"
+description: "Wrap any LLM or tool call with bento.track_ai. Manual events for SDKs without an integration."
+icon: "code"
 ---
+
+`bento.track_ai` is the manual path. Call it once per LLM site you want in Bento. Use it for SDKs without an [integration](/python/integrations) — OpenAI, Anthropic, Bedrock, Vertex, anything else — or alongside an integration for custom events.
 
 ```python
 import bentolabs_sdk.analytics as bento
@@ -10,67 +12,101 @@ import bentolabs_sdk.analytics as bento
 bento.track_ai(
     event="user_message",
     user_id="user_42",
+    convo_id="conv_abc",
+    model="gpt-4o",
+    provider="openai",
     input="What's the capital of France?",
     output="Paris.",
-    model="claude-3-5-sonnet-20241022",
-    provider="anthropic",
-    convo_id="conv_abc",
 )
 ```
 
-Each call ships one OTel span to BentoLabs. The span lands in your dashboard within seconds.
+Each call ships one span. It lands in the dashboard within seconds.
 
-## Signature
+## Arguments
 
 <ParamField path="event" type="str" required>
-  Free-form event name. Becomes `span.name` in OTel and the row title in the dashboard.
+  Event name, shown as the row title.
 </ParamField>
 
 <ParamField path="user_id" type="str">
-  Your stable user identifier. Pass-through string only, no profile data is stored.
+  Your stable user identifier. Pass-through string; no profile data is stored.
 </ParamField>
 
 <ParamField path="convo_id" type="str">
-  Conversation or session ID. Same value across all turns in one conversation links them in the timeline view.
+  Conversation or session ID. Same value across turns links them in the timeline view.
 </ParamField>
 
 <ParamField path="model" type="str">
-  Model identifier, e.g. `claude-3-5-sonnet-20241022` or `gpt-4o`. Required for cost view and model breakdowns.
+  Model identifier, e.g. `gpt-4o` or `claude-3-5-sonnet-20241022`. Required for cost and per-model breakdowns.
 </ParamField>
 
 <ParamField path="provider" type="str">
-  Provider key. One of `openai`, `anthropic`, `google`, `aws_bedrock`, etc. **Not** auto-inferred from model name.
+  Provider key. One of `openai`, `anthropic`, `google`, `aws_bedrock`, `azure_openai`, `cohere`, `mistral`. **Not** auto-inferred from model name.
 </ParamField>
 
 <ParamField path="input" type="str | dict | list">
-  The prompt or input. Strings pass through; dicts and lists are JSON-serialized.
+  Prompt or input. Strings pass through; dicts and lists are JSON-serialized.
 </ParamField>
 
 <ParamField path="output" type="str | dict | list">
-  The model output. Same serialization rules as `input`.
+  Model output. Same serialization rules as `input`.
 </ParamField>
 
 <ParamField path="properties" type="dict">
-  Arbitrary custom dimensions. See [Properties](/python/properties).
+  Custom dimensions. See [Properties](/python/properties).
 </ParamField>
 
-Returns: the span ID as a 16-character hex string. Useful for logging or correlating with downstream systems.
+Returns the span ID as a 16-character hex string.
 
-## Multi-turn conversations
+## Pass all four
+
+If you skip any of these, the dashboard column behind it stays empty for that call. The defaults you almost always want:
+
+| Argument | What you lose if you skip it |
+|---|---|
+| `user_id` | User filter and per-user breakdowns. |
+| `convo_id` | Multi-turn conversations look like N independent rows. |
+| `model` | Cost view and per-model breakdowns. |
+| `provider` | Provider filter. Bento does not guess from the model name. |
+
+<Warning>
+  Bedrock model IDs like `anthropic.claude-3-sonnet-20240229-v1:0` need `provider="aws_bedrock"`, **not** `"anthropic"`. The model ID is ambiguous on purpose; the provider tag breaks the tie.
+</Warning>
+
+## Common shapes
+
+### A single LLM call
+
+```python
+resp = client.chat.completions.create(model="gpt-4o", messages=messages)
+reply = resp.choices[0].message.content
+
+bento.track_ai(
+    event="chat",
+    user_id=user.id,
+    convo_id=conv_id,
+    model="gpt-4o",
+    provider="openai",
+    input=messages,
+    output=reply,
+)
+```
+
+### Multi-turn conversation
 
 Pass the same `convo_id` on every turn:
 
 ```python
 convo = "conv_2026-05-10_user42"
 
-bento.track_ai(event="user_msg", input="Hi", convo_id=convo, user_id="u1")
-bento.track_ai(event="assistant_msg", output="Hello!", convo_id=convo, user_id="u1")
-bento.track_ai(event="user_msg", input="And then?", convo_id=convo, user_id="u1")
+bento.track_ai(event="user_msg",      input="Hi",        convo_id=convo, user_id="u1", model="gpt-4o", provider="openai")
+bento.track_ai(event="assistant_msg", output="Hello!",   convo_id=convo, user_id="u1", model="gpt-4o", provider="openai")
+bento.track_ai(event="user_msg",      input="And then?", convo_id=convo, user_id="u1", model="gpt-4o", provider="openai")
 ```
 
-## Structured chat messages
+### Structured chat messages
 
-Dicts and lists are JSON-serialized into `input.value` / `output.value`:
+Dicts and lists are JSON-serialized:
 
 ```python
 bento.track_ai(
@@ -81,15 +117,49 @@ bento.track_ai(
     ],
     output={"role": "assistant", "content": "Hello!"},
     user_id="u1",
+    convo_id="conv_abc",
+    model="gpt-4o",
+    provider="openai",
+)
+```
+
+### Streaming
+
+Call `track_ai` once after the stream finishes. Accumulate the output, then emit one event:
+
+```python
+chunks = []
+for chunk in client.chat.completions.create(model="gpt-4o", messages=messages, stream=True):
+    chunks.append(chunk.choices[0].delta.content or "")
+full = "".join(chunks)
+
+bento.track_ai(
+    event="streamed_chat",
+    user_id=user.id, convo_id=conv_id,
+    model="gpt-4o", provider="openai",
+    input=messages, output=full,
 )
 ```
 
 ## Parenting
 
-`track_ai` calls are root spans by default. They detach from any caller's OTel context, so a `track_ai` inside a customer's FastAPI or Django span doesn't get pulled into that trace.
+`bento.track_ai` calls are root spans by default. They detach from any caller's OTel context, so calling `track_ai` inside a FastAPI or Django request doesn't pull the LLM event into that trace.
 
-When you call `track_ai` inside a [trajectory](/python/trajectories) opened with `bento.begin(...)`, the call becomes a child of the trajectory span instead.
+Inside a [`bento.begin(...)`](/python/trajectories) block, `track_ai` calls become children of the trajectory instead — the whole multi-step turn renders as one trace.
 
-<Tip>
-  This isolation is intentional. Without it, a `track_ai` inside a customer's instrumented stack would ship a "child-only" OTLP batch and the ingest mapper would drop trace-level fields.
-</Tip>
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Integrations" icon="plug" href="/python/integrations">
+    Drop the per-call wrapping for Google ADK.
+  </Card>
+  <Card title="Properties" icon="sliders" href="/python/properties">
+    Tag events with arbitrary custom dimensions.
+  </Card>
+  <Card title="Trajectories" icon="diagram-project" href="/python/trajectories">
+    Group multi-step work into one trace.
+  </Card>
+  <Card title="Attributes mapping" icon="table" href="/concepts/attributes">
+    How each argument lands in the dashboard.
+  </Card>
+</CardGroup>
