@@ -4,7 +4,7 @@ description: "Trajectories, spans, attributes, sessions. The four primitives tha
 icon: "diagram-project"
 ---
 
-The BentoLabs dashboard (conversation timelines, cost breakdowns, user analytics, agent behavior views) is built from four primitives the SDK emits as you run your app. Once you know what each one represents, you can predict how any chart in the product is computed.
+Every view in Bento — traces, signals, evaluations, the trace timeline, cost and user breakdowns — is built from four primitives the SDK emits as you run your app. Once you know what each one represents, you can predict how any chart in the product is computed.
 
 ## The four primitives
 
@@ -32,7 +32,7 @@ The BentoLabs dashboard (conversation timelines, cost breakdowns, user analytics
 </CardGroup>
 
 <Note>
-  Under the hood these are OpenTelemetry spans with [OpenInference](https://github.com/Arize-ai/openinference) and [GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) semantic conventions. You can ignore that unless you're wiring BentoLabs into an existing OTel pipeline.
+  Under the hood these are OpenTelemetry spans with [OpenInference](https://github.com/Arize-ai/openinference) and [GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) semantic conventions. You can ignore that unless you're wiring Bento into an existing OTel pipeline.
 </Note>
 
 ## How they nest
@@ -51,7 +51,7 @@ A bare `track_ai` call with no surrounding `begin` is its own one-span trajector
 
 ## What gets emitted
 
-Every call produces one OTel span. The attributes below land in dashboard columns. Everything else lives in the per-span attributes JSON.
+Every manual call produces one OTel span. Spans captured by the [Google ADK integration](/python/integrations) (`bento.instrument()`) land in the same columns via OpenInference semantic conventions — you write none of the per-call code in that case. The attributes below land in dashboard columns. Everything else lives in the per-span attributes JSON.
 
 | Concept       | OTel attribute            | Dashboard column |
 |---------------|---------------------------|------------------|

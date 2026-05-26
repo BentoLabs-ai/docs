@@ -1,12 +1,16 @@
 ---
 title: "Changelog"
-description: "Release notes for the BentoLabs SDKs."
+description: "Release notes for the Bento SDKs."
 icon: "clock-rotate-left"
 ---
 
 Release notes for [`bentolabs-sdk`](/python/installation). Versions follow [SemVer](https://semver.org/).
 
 <Update label="v0.2.0" description="Python SDK" tags={["Python"]}>
+
+<Note>
+  Integrations (`bento.instrument()`), identity getters, and the late-binding helpers (`update_current_trace`, `propagate_attributes`) shipped in a later patch under the same 0.2.0 minor; install the latest published `bentolabs-sdk` to pick them up. Earlier 0.2.0 builds only include the analytics convenience layer below.
+</Note>
 
 ### Added
 
@@ -15,6 +19,11 @@ Release notes for [`bentolabs-sdk`](/python/installation). Versions follow [SemV
 - `@bento.interaction` and `@bento.tool` decorators. Both work on sync and async functions.
 - `@bento.tool` records bound arguments as `input.value` and the return value as `output.value` automatically.
 - `bento.tool_span(...)` for standalone tool spans, and `interaction.tool_span(...)` for tool spans inside an open trajectory. Both set `openinference.span.kind="tool"`.
+- **Google ADK integration.** `bento.instrument()` captures every model call, tool call, and agent step from Google ADK in one line. Install with `pip install "bentolabs-sdk[adk]"`. `bento.uninstrument()` reverses it; `bento.shutdown()` calls `uninstrument()` automatically. See [Integrations](/python/integrations).
+- **Identity getters at `init()`.** `bento.init(user_id=..., session_id=..., tags=...)` accepts static values or zero-arg callables. Bento invokes the callable on every span (integration or manual) and writes the result to `gen_ai.user.id` / `gen_ai.conversation.id` / `langfuse.tags`. Partial `init()` calls preserve previously registered getters.
+- **Late-binding identity.** `bento.update_current_trace(user_id=, session_id=, tags=, properties=)` patches the open trajectory's root span. `bento.update_current_span(properties=)` patches the innermost active span. See [Identity helpers](/python/identity).
+- **`bento.propagate_attributes(...)`** context manager for scoped per-task identity overrides. Useful for workers that received identity over a queue.
+- Trajectories opened with `bento.begin(...)` now share `trace_id` with spans captured by the integration when `bento.instrument()` is active.
 
 ### Improved
 
@@ -22,7 +31,7 @@ Release notes for [`bentolabs-sdk`](/python/installation). Versions follow [SemV
 
 ### Changed
 
-- `track_ai` and `begin` now detach from the caller's active OTel context. BentoLabs spans will not get attached to FastAPI, Django, or other framework traces.
+- `track_ai` and `begin` now detach from the caller's active OTel context. Bento spans will not get attached to FastAPI, Django, or other framework traces.
 
 </Update>
 
@@ -32,7 +41,7 @@ Initial release.
 
 ### Added
 
-- `BentoLabsSpanProcessor`: OTel `SpanProcessor` that ships spans to BentoLabs.
+- `BentoLabsSpanProcessor`: OTel `SpanProcessor` that ships spans to Bento.
 - `BentoLabsTraceExporter`: OTel `SpanExporter` for batch or custom processor setups.
 - `resolve_options`: resolves API key and base URL from constructor args, env vars (`BENTOLABS_API_KEY`, `BENTOLABS_BASE_URL`), or defaults.
 - `BentoAuthError` with a `code` field. Codes: `missing_api_key`, `invalid_api_key_format`, `already_initialized`.

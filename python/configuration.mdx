@@ -21,7 +21,40 @@ import bentolabs_sdk.analytics as bento
 bento.init(api_key="bl_pk_explicit", base_url="http://localhost:8080")
 ```
 
-`init()` is optional. The first `track_ai` call will lazy-initialize from env vars automatically. Call `init()` explicitly when you want to pay setup cost up front (cold-start sensitive workloads) or pass credentials from code.
+`init()` is optional if you only use `bento.track_ai`. The first call lazy-initializes from env vars. Call `init()` explicitly when you want to pay setup cost up front (cold-start sensitive workloads), pass credentials from code, or **register identity getters** (the next section). For [integrations](/python/integrations), always call `bento.init()` before `bento.instrument()` so the getters are registered before the first captured call.
+
+## Identity getters
+
+`init()` accepts `user_id`, `session_id`, and `tags` kwargs. Bento invokes them on every span — whether captured by an integration or emitted by `bento.track_ai` — and writes the result to `gen_ai.user.id`, `gen_ai.conversation.id`, and `langfuse.tags`.
+
+```python
+bento.init(
+    user_id=lambda: get_current_user_id(),
+    session_id=lambda: get_current_session_id(),
+    tags=["env:prod", "tenant:acme"],
+)
+```
+
+Each kwarg accepts three forms:
+
+| Form | Effect |
+|---|---|
+| Zero-arg callable | Invoked on every span. Use for per-request identity (`ContextVar.get`, framework state, auth library). |
+| Static value | Stamped on every span as-is. Use for single-tenant apps. |
+| Omitted | Keep whatever was previously registered (partial `init()` is an update, not a replace). |
+| Explicit `None` | Clear the source for that field. |
+
+```python
+bento.init(user_id=get_user)            # registers user_id only
+bento.init(session_id=get_session)      # user_id getter survives
+bento.init(user_id=None)                # explicitly clears user_id
+```
+
+<Tip>
+  A getter that raises is swallowed by the SDK and the field is dropped for that span. Telemetry must never break the host app.
+</Tip>
+
+See [Integrations → Identity at init](/python/integrations#identity-at-init) for the three common bridges (framework state, ContextVar, auth library), and [Identity helpers](/python/identity) for late-binding (`update_current_trace`, `propagate_attributes`).
 
 ## Lifecycle
 

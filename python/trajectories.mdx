@@ -1,10 +1,16 @@
 ---
 title: "Trajectories"
-description: "Group multi-step work into a single trace using begin(), decorators, and tool spans."
+description: "Group multi-step work into a single trace. Advanced — most apps don't need this."
 icon: "diagram-project"
 ---
 
-A **trajectory** is one OTel span that stays open for the lifetime of a conversation, turn, or multi-step task. Subsequent `track_ai` and `tool_span` calls in the same task become children of it, so the whole flow shows up as one trace in the dashboard instead of N independent rows.
+<Note>
+  This is an advanced feature. For most apps, an [integration](/python/integrations) or [tracking events](/python/track-ai) is enough. Reach for trajectories only when you need a single trace to span multiple LLM calls and tool calls within one logical "turn".
+</Note>
+
+A **trajectory** is one OTel span that stays open across a multi-step turn. Subsequent `bento.track_ai` and `tool_span` calls in the same task become children of it, so the whole flow shows up as one trace instead of N independent rows.
+
+When [`bento.instrument()`](/python/integrations) is active, spans the Google ADK integration captures share the trajectory's `trace_id` too — one `with bento.begin(...)` block stitches manual and integration spans into one trace.
 
 ## bento.begin()
 

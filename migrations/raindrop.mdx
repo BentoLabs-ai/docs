@@ -1,0 +1,244 @@
+---
+title: "From Raindrop"
+description: "Mechanical translation from Raindrop (raindrop-ai) to Bento."
+icon: "/images/raindrop.svg"
+---
+
+Bento's `bento.track_ai` was modeled on Raindrop's, so most call shapes survive the port unchanged. The two real differences: Bento requires `provider=` on every call, and Bento's native integration ships for Google ADK only — but you can preserve Raindrop's auto-capture story for OpenAI / Anthropic / Bedrock by swapping to OpenInference instrumentors.
+
+## Migrate with an AI coding tool
+
+<Prompt description="Install the Bento docs skill so your AI coding tool has full context." actions={["copy"]}>
+  Help me migrate this project from Raindrop to Bento. Walk it step by step.
+
+  ## 0. Load context
+
+  ```bash
+  npx skills add https://docs.bentolabs.ai
+  ```
+
+  Read `https://docs.bentolabs.ai/migrations/raindrop` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
+
+  ## 1. Discover
+
+  ```bash
+  grep -rnE "import raindrop|from raindrop|raindrop\." --include="*.py" .
+  grep -rnE "@raindrop\.(interaction|tool|task)" --include="*.py" .
+  grep -rnE "raindrop\.identify|raindrop\.track_signal" --include="*.py" .
+  grep -rnE "auto_instrument|tracing_enabled|set_redact_pii" --include="*.py" .
+  grep -rnE "RAINDROP_WRITE_KEY" .
+  grep -rnE "openai\.|anthropic\.|bedrock-runtime|\.chat\.completions\.create|\.messages\.create" --include="*.py" .
+  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+  ```
+
+  Summarize every `raindrop.` call site, decorators in use, LLM call sites, and whether ADK is present. Confirm before editing.
+
+  ## 2. Install Bento alongside Raindrop
+
+  ```bash
+  pip install bentolabs-sdk
+  # ADK detected? pip install "bentolabs-sdk[adk]"
+  ```
+
+  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Raindrop yet.
+
+  ## 3. Pick the smoothest path, then fall through
+
+  - **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
+  - **Path B — Raindrop's `auto_instrument=True` was capturing OpenAI / Anthropic / Bedrock?** Preserve that by registering `openinference-instrumentation-<openai|anthropic|bedrock>` against a `BentoLabsSpanProcessor`. Call sites untouched.
+  - **Path C — translate the rest manually** per the table at `/migrations/raindrop`. Add `provider=` to every `bento.track_ai` call. `@raindrop.task` → `@bento.tool`. Delete `identify()` and `track_signal()` (no equivalents).
+
+  Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
+
+  ## 4. Verify
+
+  Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `convo_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
+
+  ## 5. Remove Raindrop
+
+  Only after verify passes:
+
+  ```bash
+  pip uninstall raindrop-ai
+  ```
+
+  Drop the `RAINDROP_WRITE_KEY` env var.
+</Prompt>
+
+## The three paths
+
+Pick the smoothest applicable one and fall through. Most migrations end up using **B** for the bulk and **C** for the handful of bespoke decorators.
+
+| Path | When | Effort |
+|---|---|---|
+| [A — Google ADK integration](#path-a-google-adk-integration) | ADK is in use | 3 lines at startup |
+| [B — Auto-capture with OpenInference](#path-b-auto-capture-with-openinference) | Raindrop's `auto_instrument=True` captured OpenAI / Anthropic / Bedrock for you | Drop the Raindrop init, register one instrumentor |
+| [C — Manual translation](#path-c-manual-translation) | `@raindrop.interaction` / `@raindrop.tool` / `@raindrop.task`, bare `track_ai` calls | Per-call-site rename, add `provider=` |
+
+---
+
+## Path A: Google ADK integration
+
+If your app runs Google ADK agents, this captures every model call, tool call, and agent step automatically.
+
+```bash
+pip install "bentolabs-sdk[adk]"
+```
+
+```python
+import bentolabs_sdk as bento
+
+bento.init(
+    user_id=lambda: get_current_user_id(),
+    session_id=lambda: get_current_session_id(),
+)
+bento.instrument()
+```
+
+That's it. Full reference: [Integrations](/python/integrations).
+
+---
+
+## Path B: Auto-capture with OpenInference
+
+Raindrop's `auto_instrument=True` (powered by Traceloop) wrapped OpenAI / Anthropic / Bedrock automatically. Bento preserves the same UX with OpenInference instrumentors registered against a `BentoLabsSpanProcessor`. **Your call sites stay untouched** — every LLM call is captured at the SDK level.
+
+```bash
+pip install openinference-instrumentation-openai
+# Other libs as needed: -anthropic, -bedrock, -langchain, -llama-index
+```
+
+```python
+from openinference.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
+
+from bentolabs_sdk import BentoLabsSpanProcessor
+
+provider = TracerProvider()
+provider.add_span_processor(BentoLabsSpanProcessor())
+trace.set_tracer_provider(provider)
+
+OpenAIInstrumentor().instrument(tracer_provider=provider)
+```
+
+Now drop `raindrop.init(...)` and the `auto_instrument=True` flag. Your existing OpenAI call sites are captured by the instrumentor:
+
+```python
+from openai import OpenAI
+
+client = OpenAI()
+resp = client.chat.completions.create(model="gpt-4o", messages=[...])
+# Bento captures the call. Nothing else to do.
+```
+
+For Anthropic / Bedrock: install the matching `openinference-instrumentation-*` and register it the same way.
+
+Full reference: [OTel transport](/python/otel-transport).
+
+---
+
+## Path C: Manual translation
+
+For bespoke decorators, manual `track_ai` calls, and identity helpers, translate per the tables.
+
+### Setup
+
+| Raindrop | Bento |
+|---|---|
+| `pip install raindrop-ai` | `pip install bentolabs-sdk` |
+| `RAINDROP_WRITE_KEY` | `BENTOLABS_API_KEY` |
+| `import raindrop.analytics as raindrop` | `import bentolabs_sdk as bento` |
+| `raindrop.init(api_key=...)` | `bento.init(api_key=...)` |
+| `raindrop.init(auto_instrument=True, instruments={...})` | Use Path B instead |
+| `raindrop.flush()` / `raindrop.shutdown()` | `bento.flush()` / `bento.shutdown()` |
+
+### Tracking
+
+| Raindrop | Bento |
+|---|---|
+| `raindrop.track_ai(...)` | `bento.track_ai(...)` — **add `provider=`** |
+| `raindrop.begin(...)` | `bento.begin(...)` |
+| `interaction.track_tool(...)` | `with interaction.tool_span(...) as ts:` |
+
+### Decorators
+
+| Raindrop | Bento |
+|---|---|
+| `@raindrop.interaction("X")` | `@bento.interaction(event="X")` |
+| `@raindrop.tool("X")` | `@bento.tool(name="X")` |
+| `@raindrop.task("X")` / `task_span(...)` | `@bento.tool` / `tool_span(...)` — no separate "task" kind |
+
+### What's gone
+
+| Raindrop | Where it goes |
+|---|---|
+| `raindrop.identify(user_id, traits)` | Move traits to `properties=` or init-time `tags` |
+| `raindrop.track_signal(...)` | `bento.track_ai(event="feedback", properties={...})` |
+| `raindrop.set_redact_pii(True)` | Scrub at the app boundary |
+| `Attachment(...)` / `add_attachments(...)` | Fold metadata into `properties=`; no binary support |
+
+---
+
+## Watch out for
+
+- **`provider=` is required.** Raindrop infers it via Traceloop; Bento does not. Bedrock model IDs need `provider="aws_bedrock"`, not `"anthropic"`.
+- **`identify()` data is lost.** No user-profile store in Bento. Port traits to per-call `properties=` or init-time `tags`.
+- **OTel context.** Bento detaches from any outer OTel context; Raindrop participates in it. Agent runs become standalone traces.
+
+## Side-by-side
+
+```python Raindrop
+import raindrop.analytics as raindrop
+
+raindrop.init(os.getenv("RAINDROP_WRITE_KEY"), auto_instrument=True)
+
+@raindrop.interaction("answer_question")
+def answer(user_id, convo_id, question):
+    raindrop.identify(user_id, {"plan": "pro"})
+
+    resp = openai_client.chat.completions.create(
+        model="gpt-4o", messages=[{"role": "user", "content": question}],
+    )
+    reply = resp.choices[0].message.content
+    raindrop.track_ai(
+        user_id=user_id, event="answer", convo_id=convo_id,
+        model="gpt-4o", input=question, output=reply,
+    )
+    return reply
+```
+
+```python Bento
+import bentolabs_sdk as bento
+
+bento.init(api_key=os.getenv("BENTOLABS_API_KEY"))
+
+@bento.interaction(event="answer_question")
+def answer(user_id, convo_id, question):
+    resp = openai_client.chat.completions.create(
+        model="gpt-4o", messages=[{"role": "user", "content": question}],
+    )
+    reply = resp.choices[0].message.content
+    bento.track_ai(
+        event="answer",
+        user_id=user_id,
+        convo_id=convo_id,
+        model="gpt-4o",
+        provider="openai",                  # NEW — explicit
+        input=question,
+        output=reply,
+        properties={"plan": "pro"},          # was raindrop.identify(...) traits
+    )
+    return reply
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/python/configuration">
+    `init()`, identity getters, env vars.
+  </Card>
+  <Card title="Tracking events" icon="code" href="/python/track-ai">
+    The `bento.track_ai` reference.
+  </Card>
+</CardGroup>

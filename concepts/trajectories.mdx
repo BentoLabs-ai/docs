@@ -94,7 +94,7 @@ with bento.begin(event="agent_loop", user_id="u1") as t:
   </Accordion>
 
   <Accordion title="Detached parent">
-    Both `begin` and `track_ai` detach from any outer OTel context. Customer FastAPI or Django spans will not become parents of BentoLabs spans by accident.
+    Both `begin` and `track_ai` detach from any outer OTel context. Customer FastAPI or Django spans will not become parents of Bento spans by accident.
   </Accordion>
 </AccordionGroup>
 
@@ -122,4 +122,4 @@ The two `track_ai` spans and the `tool_span` all parent to the trajectory.
 
 - **Not a session.** A session is the set of trajectories that share a `convo_id`. See [Sessions and users](/concepts/sessions).
 - **Not a request.** One HTTP request can open zero, one, or many trajectories.
-- **Not auto-instrumented.** The SDK does not patch OpenAI, Anthropic, or LangChain. You decide what becomes a span.
+- **Not opened by an integration.** `bento.instrument()` captures spans inside whatever turn you've opened with `bento.begin(...)`, but it never opens a trajectory on its own. You decide where each turn begins and ends.

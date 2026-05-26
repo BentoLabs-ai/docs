@@ -1,88 +1,112 @@
 ---
 title: "Introduction"
-description: "Product analytics for AI apps. Conversation timelines, cost and model breakdowns, user analytics, and agent behavior, from one SDK call."
-icon: "house"
+description: "Production infrastructure for AI agents. Monitor what runs. Improve what fails. Compound learnings."
+icon: "compass"
 ---
-
-BentoLabs is product analytics built for AI apps. Add one SDK call where your model runs and the dashboard takes over: multi-turn conversation timelines, cost and model breakdowns, per-user views, and a step-by-step replay of every agent run.
-
-## Why BentoLabs
-
-You can't measure an AI app the way you'd measure a normal product. A click isn't a conversation. A pageview isn't a model call. Tool use, retries, cost, and multi-step reasoning don't fit a generic event schema, and retrofitting them never feels right.
-
-BentoLabs treats AI primitives as first-class:
-
-<CardGroup cols={2}>
-  <Card title="Native AI columns" icon="layer-group">
-    `model`, `provider`, `convo_id`, `user_id`, and tool kind are columns out of the box. Filter, group, and break down by any of them without schema work.
-  </Card>
-  <Card title="Multi-turn by default" icon="comments">
-    Pass the same `convo_id` and every turn, model call, and tool call stitches into one conversation timeline.
-  </Card>
-  <Card title="Agent runs as one row" icon="route">
-    A trajectory captures the full plan-act-respond loop. Click in for the step-by-step.
-  </Card>
-  <Card title="Custom dimensions, zero migrations" icon="sliders">
-    `properties={"experiment_id": 17, "is_premium": True}` is a new filter the moment you ship.
-  </Card>
-</CardGroup>
-
-The SDK speaks OpenTelemetry under the hood. If you already have OTel set up, it slots in. If you don't, you'd never know it was there.
-
-## Start here
-
-<CardGroup cols={2}>
-  <Card title="Quickstart" icon="bolt" href="/quickstart">
-    Send your first AI event in under a minute.
-  </Card>
-  <Card title="Data model" icon="diagram-project" href="/concepts/data-model">
-    Trajectories, spans, attributes, and how they group into sessions.
-  </Card>
-</CardGroup>
 
 ## Set up with an AI coding tool
 
-<Prompt description="Install the BentoLabs docs skill and MCP server so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
-  Help me integrate the BentoLabs SDK into this project. Install the BentoLabs docs skill (`npx skills add https://docs.bentolabs.ai`), detect Python vs TypeScript and install the right SDK package, then wrap the main LLM call sites with `bento.track_ai(...)` passing `event`, `user_id`, `convo_id`, `model`, `provider`, `input`, and `output`. Add `BENTOLABS_API_KEY` to the env config and point me to https://platform.bentolabs.ai if I need a key.
+<Prompt description="Install the Bento docs skill so your AI coding tool has full context on the SDK." actions={["copy", "cursor"]}>
+  Help me integrate Bento into this project. Walk it step by step.
+
+  ## 0. Load context
+
+  ```bash
+  npx skills add https://docs.bentolabs.ai
+  ```
+
+  Read `https://docs.bentolabs.ai/quickstart` and `https://docs.bentolabs.ai/python/integrations` before writing any code. The TypeScript SDK is not yet GA — if this is a Node project, point me at `https://docs.bentolabs.ai/typescript` and stop.
+
+  ## 1. Discover
+
+  ```bash
+  ls pyproject.toml setup.py requirements*.txt 2>/dev/null
+  grep -rlE "from fastapi|from flask|django\.|from starlette" --include="*.py" . | head -5
+
+  # Decides the path
+  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+
+  # Other LLM SDKs (need bento.track_ai)
+  grep -rnE "openai\.|OpenAI\(|\.chat\.completions\.create" --include="*.py" .
+  grep -rnE "anthropic\.|Anthropic\(|\.messages\.create" --include="*.py" .
+  grep -rnE "bedrock-runtime|invoke_model|converse" --include="*.py" .
+  ```
+
+  Summarize: framework, whether ADK is present, other LLM call sites, env file location. Confirm before editing.
+
+  ## 2. Install
+
+  ```bash
+  pip install bentolabs-sdk
+  # ADK in use? pip install "bentolabs-sdk[adk]"
+  ```
+
+  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Point me at https://platform.bentolabs.ai if I don't have a key.
+
+  ## 3. Wire it up
+
+  If ADK is in use — three lines at startup:
+
+  ```python
+  import bentolabs_sdk as bento
+
+  bento.init(
+      user_id=lambda: get_current_user_id(),
+      session_id=lambda: get_current_session_id(),
+  )
+  bento.instrument()
+  ```
+
+  Bind the getters to whatever holds request-scoped identity (a ContextVar set by middleware, `request.state.user.id`, `g.user.id`).
+
+  For anything not covered, wrap each LLM call site with `bento.track_ai(event=, user_id=, convo_id=, model=, provider=, input=, output=)`. Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
+
+  ## 4. Verify
+
+  Run one real flow. Open https://platform.bentolabs.ai and confirm a row appears with model, user, session, input, and output populated. Empty columns → re-check Step 3 for that call site. For short scripts, call `bento.flush()` before exit.
 </Prompt>
 
 For Claude Code, Codex, OpenCode, and Windsurf, see the [quickstart](/quickstart#other-ai-coding-tools) for per-tool install commands.
 
-## Pick your SDK
-
-<CardGroup cols={2}>
-  <Card title="Python SDK" icon="python" href="/python/installation">
-    `pip install bentolabs-sdk`. Full analytics surface: `track_ai`, trajectories, decorators.
-  </Card>
-  <Card title="TypeScript SDK" icon="js" href="/typescript">
-    Coming soon. Node and browser support is in active development.
-  </Card>
-</CardGroup>
+<Frame>
+  <img src="/images/dashboard.png" alt="Bento traces view" />
+</Frame>
 
 ## What you get
 
 <CardGroup cols={2}>
-  <Card title="Trace timeline" icon="timeline">
-    Multi-turn conversations and tool calls grouped into a single trace.
+  <Card title="Traces" icon="list-tree">
+    Every span from every framework, captured via OpenTelemetry. Jump into the span tree or follow a signal straight to the call that broke.
   </Card>
-  <Card title="Cost and model breakdown" icon="chart-pie">
-    Token usage and spend by model, provider, user, or custom dimension.
+  <Card title="Signals" icon="signal">
+    Describe a failure mode in plain English. Bento trains a detector on your own traces, fires it in real time, and backfills your history.
   </Card>
-  <Card title="User-level filtering" icon="user">
-    Filter and aggregate by your own `user_id`. No profile data stored.
+  <Card title="Alerts" icon="bell">
+    Write alerts in English. Bento groups fires into incidents and judges each one real or benign — so you only wake up for real drift.
   </Card>
-  <Card title="OTel native" icon="cube">
-    Standard OTLP under the hood. Works alongside your existing tracing.
+  <Card title="Evaluations & versions" icon="rotate">
+    Close the loop. Promote good behavior, regression-test new versions on captured traces, ship the next version with confidence.
   </Card>
 </CardGroup>
 
-## Need help
+## Start in three minutes
 
 <CardGroup cols={2}>
-  <Card title="Troubleshooting" icon="wrench" href="/concepts/troubleshooting">
-    What to check when nothing shows up.
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Install the SDK, send your first trace.
   </Card>
-  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
-    Recent SDK releases.
+  <Card title="Integrations" icon="plug" href="/python/integrations">
+    One line to trace Google ADK.
+  </Card>
+</CardGroup>
+
+## Pick your SDK
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python" href="/python/installation">
+    `pip install bentolabs-sdk`. Google ADK integration, plus manual tracking for everything else.
+  </Card>
+  <Card title="TypeScript" icon="js" href="/typescript">
+    In active development. Node and browser support coming soon.
   </Card>
 </CardGroup>
