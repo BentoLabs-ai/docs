@@ -8,62 +8,64 @@ Bento's `bento.track_ai` was modeled on Raindrop's, so most call shapes survive 
 
 ## Migrate with an AI coding tool
 
-<Prompt description="Install the Bento docs skill so your AI coding tool has full context." actions={["copy"]}>
-  Help me migrate this project from Raindrop to Bento. Walk it step by step.
+Install the Bento docs skill so your AI coding tool has full context. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
 
-  ## 0. Load context
+~~~markdown
+Help me migrate this project from Raindrop to Bento. Walk it step by step.
 
-  ```bash
-  npx skills add https://docs.bentolabs.ai
-  ```
+## 0. Load context
 
-  Read `https://docs.bentolabs.ai/migrations/raindrop` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
+```bash
+npx skills add https://docs.bentolabs.ai
+```
 
-  ## 1. Discover
+Read `https://docs.bentolabs.ai/migrations/raindrop` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
 
-  ```bash
-  grep -rnE "import raindrop|from raindrop|raindrop\." --include="*.py" .
-  grep -rnE "@raindrop\.(interaction|tool|task)" --include="*.py" .
-  grep -rnE "raindrop\.identify|raindrop\.track_signal" --include="*.py" .
-  grep -rnE "auto_instrument|tracing_enabled|set_redact_pii" --include="*.py" .
-  grep -rnE "RAINDROP_WRITE_KEY" .
-  grep -rnE "openai\.|anthropic\.|bedrock-runtime|\.chat\.completions\.create|\.messages\.create" --include="*.py" .
-  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
-  ```
+## 1. Discover
 
-  Summarize every `raindrop.` call site, decorators in use, LLM call sites, and whether ADK is present. Confirm before editing.
+```bash
+grep -rnE "import raindrop|from raindrop|raindrop\." --include="*.py" .
+grep -rnE "@raindrop\.(interaction|tool|task)" --include="*.py" .
+grep -rnE "raindrop\.identify|raindrop\.track_signal" --include="*.py" .
+grep -rnE "auto_instrument|tracing_enabled|set_redact_pii" --include="*.py" .
+grep -rnE "RAINDROP_WRITE_KEY" .
+grep -rnE "openai\.|anthropic\.|bedrock-runtime|\.chat\.completions\.create|\.messages\.create" --include="*.py" .
+grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+```
 
-  ## 2. Install Bento alongside Raindrop
+Summarize every `raindrop.` call site, decorators in use, LLM call sites, and whether ADK is present. Confirm before editing.
 
-  ```bash
-  pip install bentolabs-sdk
-  # ADK detected? pip install "bentolabs-sdk[adk]"
-  ```
+## 2. Install Bento alongside Raindrop
 
-  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Raindrop yet.
+```bash
+pip install bentolabs-sdk
+# ADK detected? pip install "bentolabs-sdk[adk]"
+```
 
-  ## 3. Pick the smoothest path, then fall through
+Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Raindrop yet.
 
-  - **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
-  - **Path B — Raindrop's `auto_instrument=True` was capturing OpenAI / Anthropic / Bedrock?** Preserve that by registering `openinference-instrumentation-<openai|anthropic|bedrock>` against a `BentoLabsSpanProcessor`. Call sites untouched.
-  - **Path C — translate the rest manually** per the table at `/migrations/raindrop`. Add `provider=` to every `bento.track_ai` call. `@raindrop.task` → `@bento.tool`. Delete `identify()` and `track_signal()` (no equivalents).
+## 3. Pick the smoothest path, then fall through
 
-  Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
+- **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
+- **Path B — Raindrop's `auto_instrument=True` was capturing OpenAI / Anthropic / Bedrock?** Preserve that by registering `openinference-instrumentation-<openai|anthropic|bedrock>` against a `BentoLabsSpanProcessor`. Call sites untouched.
+- **Path C — translate the rest manually** per the table at `/migrations/raindrop`. Add `provider=` to every `bento.track_ai` call. `@raindrop.task` → `@bento.tool`. Delete `identify()` and `track_signal()` (no equivalents).
 
-  ## 4. Verify
+Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
 
-  Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `convo_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
+## 4. Verify
 
-  ## 5. Remove Raindrop
+Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `convo_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
 
-  Only after verify passes:
+## 5. Remove Raindrop
 
-  ```bash
-  pip uninstall raindrop-ai
-  ```
+Only after verify passes:
 
-  Drop the `RAINDROP_WRITE_KEY` env var.
-</Prompt>
+```bash
+pip uninstall raindrop-ai
+```
+
+Drop the `RAINDROP_WRITE_KEY` env var.
+~~~
 
 ## The three paths
 

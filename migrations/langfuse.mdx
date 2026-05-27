@@ -8,60 +8,62 @@ Both SDKs are built on OpenTelemetry, so most of your code maps over directly.
 
 ## Migrate with an AI coding tool
 
-<Prompt description="Install the Bento docs skill so your AI coding tool has full context." actions={["copy"]}>
-  Help me migrate this project from Langfuse to Bento. Walk it step by step.
+Install the Bento docs skill so your AI coding tool has full context. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
 
-  ## 0. Load context
+~~~markdown
+Help me migrate this project from Langfuse to Bento. Walk it step by step.
 
-  ```bash
-  npx skills add https://docs.bentolabs.ai
-  ```
+## 0. Load context
 
-  Read `https://docs.bentolabs.ai/migrations/langfuse` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
+```bash
+npx skills add https://docs.bentolabs.ai
+```
 
-  ## 1. Discover
+Read `https://docs.bentolabs.ai/migrations/langfuse` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
 
-  ```bash
-  grep -rnE "from langfuse|import langfuse|langfuse\." --include="*.py" .
-  grep -rnE "@observe|from langfuse\.(openai|langchain)" --include="*.py" .
-  grep -rnE "propagate_attributes|update_current_trace|langfuse\.(score|get_prompt|flush)" --include="*.py" .
-  grep -rnE "LANGFUSE_(PUBLIC|SECRET)_KEY|LANGFUSE_HOST" .
-  grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
-  ```
+## 1. Discover
 
-  Summarize the Langfuse features in use and whether ADK is present. Confirm before editing.
+```bash
+grep -rnE "from langfuse|import langfuse|langfuse\." --include="*.py" .
+grep -rnE "@observe|from langfuse\.(openai|langchain)" --include="*.py" .
+grep -rnE "propagate_attributes|update_current_trace|langfuse\.(score|get_prompt|flush)" --include="*.py" .
+grep -rnE "LANGFUSE_(PUBLIC|SECRET)_KEY|LANGFUSE_HOST" .
+grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
+```
 
-  ## 2. Install Bento alongside Langfuse
+Summarize the Langfuse features in use and whether ADK is present. Confirm before editing.
 
-  ```bash
-  pip install bentolabs-sdk
-  # ADK detected? pip install "bentolabs-sdk[adk]"
-  ```
+## 2. Install Bento alongside Langfuse
 
-  Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Langfuse yet.
+```bash
+pip install bentolabs-sdk
+# ADK detected? pip install "bentolabs-sdk[adk]"
+```
 
-  ## 3. Pick the smoothest path, then fall through
+Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Langfuse yet.
 
-  - **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
-  - **Path B — `langfuse.openai` or `langfuse.langchain` in use?** Replace with `openinference-instrumentation-<openai|langchain|anthropic|bedrock>` registered against a `BentoLabsSpanProcessor`. Call sites untouched.
-  - **Path C — translate the rest manually** per the table at `/migrations/langfuse`. `@observe()` → `@bento.interaction` / `@bento.tool`. `update_current_trace(metadata=)` → `update_current_trace(properties=)`. Drop `langfuse.score`, `langfuse.get_prompt`, datasets — no equivalents.
+## 3. Pick the smoothest path, then fall through
 
-  On `bento.track_ai` the kwarg is `convo_id=`, not `session_id=`. Same attribute under the hood.
+- **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
+- **Path B — `langfuse.openai` or `langfuse.langchain` in use?** Replace with `openinference-instrumentation-<openai|langchain|anthropic|bedrock>` registered against a `BentoLabsSpanProcessor`. Call sites untouched.
+- **Path C — translate the rest manually** per the table at `/migrations/langfuse`. `@observe()` → `@bento.interaction` / `@bento.tool`. `update_current_trace(metadata=)` → `update_current_trace(properties=)`. Drop `langfuse.score`, `langfuse.get_prompt`, datasets — no equivalents.
 
-  ## 4. Verify
+On `bento.track_ai` the kwarg is `convo_id=`, not `session_id=`. Same attribute under the hood.
 
-  Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `session_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
+## 4. Verify
 
-  ## 5. Remove Langfuse
+Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `session_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
 
-  Only after verify passes:
+## 5. Remove Langfuse
 
-  ```bash
-  pip uninstall langfuse
-  ```
+Only after verify passes:
 
-  Drop the `LANGFUSE_*` env vars.
-</Prompt>
+```bash
+pip uninstall langfuse
+```
+
+Drop the `LANGFUSE_*` env vars.
+~~~
 
 ## The three paths
 
