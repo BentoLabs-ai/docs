@@ -1,0 +1,80 @@
+---
+title: "Installation"
+description: "Install the Bento CLI, sign in, and run your first command."
+icon: "download"
+---
+
+`bentolabs-cli` is a command-line client for Bento. Use it to list traces, inspect signals, run analytics, and hit any API endpoint from your terminal.
+
+## Requirements
+
+Python 3.10 or higher.
+
+## Install
+
+With [uv](https://docs.astral.sh/uv/), which installs the CLI into an isolated tool environment:
+
+```bash
+uv tool install bentolabs-cli
+```
+
+Or with pip:
+
+```bash
+python3 -m pip install --user bentolabs-cli
+```
+
+Confirm the install:
+
+```bash
+bentolabs version
+```
+
+## Sign in
+
+```bash
+bentolabs auth login
+```
+
+Your browser opens a Bento **Allow / Deny** page. Click **Allow** and the CLI is signed in as you. Tokens are saved in the OS keychain (macOS Keychain, Linux Secret Service, Windows Credential Locker). On headless Linux without secret-service, the CLI falls back to a `chmod 0600` file. Tokens refresh automatically before they expire.
+
+```bash
+bentolabs auth whoami   # see who is signed in
+bentolabs auth logout   # revoke the session and clear tokens
+```
+
+## Pick a default workspace
+
+CLI commands act on one workspace at a time. Set a default once so you don't pass `--workspace` every time:
+
+```bash
+bentolabs workspaces list           # see workspaces you belong to
+bentolabs workspaces use <id>       # save this as the default
+```
+
+Override per command with the flag:
+
+```bash
+bentolabs traces list --workspace <other-id>
+```
+
+The flag wins over the saved default.
+
+## Run your first command
+
+```bash
+bentolabs traces list --limit 5 --output table
+```
+
+You should see a table of recent traces in your default workspace. If you see a hint about no workspace selected, run `bentolabs workspaces use <id>` first.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Commands" icon="terminal" href="/cli/commands">
+    Built-in commands, output modes, and how arguments map.
+  </Card>
+  <Card title="Python SDK" icon="python" href="/python/installation">
+    Send traces and signals from your application code.
+  </Card>
+</CardGroup>
