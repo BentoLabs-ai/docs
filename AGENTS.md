@@ -91,8 +91,15 @@ For component reference, configuration, and writing standards, install the Mintl
 npx skills add https://mintlify.com/docs
 ```
 
-## Authoring the BentoLabs `SKILL.md`
+## Authoring BentoLabs skills
 
-The repo ships a `SKILL.md` at root. Mintlify serves it at `https://docs.bentolabs.ai/skill.md` (lowercase URL is auto-handled), overriding the auto-generated default. That URL is what `npx skills add https://docs.bentolabs.ai` reads, so the file is the public install surface for the BentoLabs agent skill. The uppercase filename also satisfies the canonical Anthropic Agent Skills spec, so `npx skills add BentoLabs-ai/docs` (the repo-install form) finds it too.
+Skills live in a separate repo at [BentoLabs-ai/skills](https://github.com/BentoLabs-ai/skills), not in `public-docs`. Locally, clone it as a sibling to this repo at `../skills/`. Two skills ship today:
 
-Keep the frontmatter `description` accurate and full of trigger phrases. It is the only signal Claude uses to decide whether to load the skill into context. Body stays tight (under ~5 KB rendered); deeper detail lives in the per-page `.md` URLs the body links to. Do not delete `SKILL.md` thinking it is unused.
+- `bentolabs-integrate` — Python SDK install, `bento.instrument()`, `bento.track_ai`, identity getters, trajectories, OTel attribute mapping.
+- `bentolabs-cli` — CLI install, `auth login`, `workspaces use`, output modes, `raw`, common recipes.
+
+Install both with `npx skills add BentoLabs-ai/skills`. The Skills CLI fetches the `SKILL.md` files directly from GitHub. No Mintlify hosting, no CI in the skills repo.
+
+To edit a skill, work in `../skills/skills/<name>/SKILL.md` and push from there. Skill content does not live in `public-docs`.
+
+Keep each skill's frontmatter `description` accurate and full of trigger phrases. It is the only signal Claude uses to decide whether to load the skill into context. Body stays tight (under ~5 KB rendered); deeper detail lives in the per-page `.md` URLs at `docs.bentolabs.ai`.

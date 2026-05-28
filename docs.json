@@ -26,18 +26,17 @@
           {
             "group": "Overview",
             "icon": "house",
-            "pages": [
-              "index",
-              "quickstart"
-            ]
+            "pages": ["index", "quickstart"]
+          },
+          {
+            "group": "CLI",
+            "icon": "terminal",
+            "pages": ["cli/installation", "cli/commands"]
           },
           {
             "group": "Migrations",
-            "icon": "arrow-right-arrow-left",
-            "pages": [
-              "migrations/langfuse",
-              "migrations/raindrop"
-            ]
+            "icon": "right-left",
+            "pages": ["migrations/langfuse", "migrations/raindrop"]
           },
           {
             "group": "Concepts",
@@ -59,25 +58,17 @@
           {
             "group": "Get started",
             "icon": "rocket",
-            "pages": [
-              "python/installation",
-              "python/configuration"
-            ]
+            "pages": ["python/installation", "python/configuration"]
           },
           {
             "group": "Integrations",
             "icon": "plug",
-            "pages": [
-              "python/integrations"
-            ]
+            "pages": ["python/integrations"]
           },
           {
             "group": "Manual tracking",
             "icon": "paper-plane",
-            "pages": [
-              "python/track-ai",
-              "python/properties"
-            ]
+            "pages": ["python/track-ai", "python/properties"]
           },
           {
             "group": "Advanced",
@@ -95,9 +86,7 @@
         "tab": "TypeScript SDK",
         "icon": "js",
         "tag": "Coming soon",
-        "pages": [
-          "typescript/index"
-        ]
+        "pages": ["typescript/index"]
       }
     ]
   },
@@ -204,6 +193,10 @@
           {
             "label": "TypeScript SDK",
             "href": "/typescript"
+          },
+          {
+            "label": "CLI",
+            "href": "/cli/installation"
           }
         ]
       },

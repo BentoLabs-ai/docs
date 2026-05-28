@@ -1,0 +1,181 @@
+---
+title: "Commands"
+description: "Command groups, built-ins, flags, and output modes."
+icon: "terminal"
+---
+
+The CLI builds its command list from the Bento API. Endpoints are grouped by tag, so each one becomes `bentolabs <group> <command>`.
+
+```bash
+bentolabs --help                     # list available groups
+bentolabs traces --help              # list commands under "traces"
+bentolabs traces list --help         # see flags for one command
+```
+
+If a command you expect is missing, run `bentolabs refresh` to pull the latest command list from the API.
+
+## How arguments work
+
+Each generated command has three kinds of input:
+
+| Source | How it maps |
+|---|---|
+| Path params like `/things/{thing_id}` | Required positional arguments, in the same order as the path. |
+| `workspace_id` in the path | Never a positional. The CLI fills it in from `--workspace` or the saved default. |
+| Query params | Keyword `--flags`. Types come from the API spec (string, int, float, bool, list). Repeat the flag to pass a list. |
+| Request body | `--data '<json>'`, `--data-file <path>`, or piped in from stdin. |
+
+```bash
+# Positional path param
+bentolabs signals get <signal-id>
+
+# List-valued flag (repeat the flag)
+bentolabs traces list --tag prod --tag errors
+
+# Body from a flag
+bentolabs <group> <create> --data '{"name":"prod"}'
+
+# Body from a file
+bentolabs <group> <create> --data-file ./payload.json
+
+# Body from stdin
+cat payload.json | bentolabs <group> <create>
+```
+
+If no workspace is set, the CLI prints a hint pointing at `bentolabs workspaces list` and `bentolabs workspaces use <id>`.
+
+## Shared flags
+
+These flags work on every generated command:
+
+| Flag | What it does |
+|---|---|
+| `--workspace <id>` | Use this workspace instead of the saved default. Only on commands that need one. |
+| `--data '<json>'` | Send a JSON request body inline. |
+| `--data-file <path>` | Send a JSON request body from a file. |
+| `--output <mode>` | `pretty` (default), `raw`, or `table`. See below. |
+| `--help` | Show the command's signature and exit. |
+
+## Output modes
+
+Pretty-printed JSON is the default. Switch with `--output`:
+
+| Mode | Use case |
+|---|---|
+| `pretty` | Default. Human-readable JSON with syntax highlighting. |
+| `raw` | Plain JSON to stdout. Pipe into `jq`, `grep`, or a file. |
+| `table` | Renders a table for list endpoints. Falls back to pretty if the shape is not tabular. |
+
+Table mode also unwraps the common `{"items": [...], "next_cursor": ...}` shape for you, so list endpoints render directly.
+
+```bash
+bentolabs traces list --output table
+bentolabs traces list --output raw | jq '.items[] | .id'
+```
+
+## Built-in commands
+
+A small set of commands are hand-written rather than generated.
+
+### `auth`
+
+Sign in, sign out, and check who you are.
+
+```bash
+bentolabs auth login          # opens the browser, saves tokens to the keychain
+bentolabs auth whoami         # show signed-in identity and current workspace
+bentolabs auth logout         # revoke the session and clear local tokens
+```
+
+Tokens refresh automatically near expiry. If a refresh fails, for example because another process already rotated it, the next command returns a clean 401 and asks you to run `bentolabs auth login` again.
+
+### `workspaces use`
+
+Save a default workspace so other commands don't need `--workspace`.
+
+```bash
+bentolabs workspaces list
+bentolabs workspaces use <ws-id>
+```
+
+The flag wins over the saved default when both are present.
+
+### `raw`
+
+Send a raw request to any API path. Useful for endpoints the generated tree doesn't expose cleanly.
+
+```bash
+bentolabs raw GET /health
+bentolabs raw GET /v1/workspaces/<ws-id>/traces
+bentolabs raw POST /v1/workspaces/<ws-id>/some-endpoint --data '{"x":1}'
+```
+
+`raw` uses the same auth and `--output` modes as generated commands. You fill in path params yourself, including `workspace_id`. The body comes from `--data` or `--data-file` only, not from stdin.
+
+### `refresh`
+
+Pull a fresh copy of the command list from the API. Run this when a new endpoint is missing from `--help`.
+
+```bash
+bentolabs refresh
+```
+
+The output reports how many operations were cached.
+
+### `config`
+
+Inspect the active CLI configuration.
+
+```bash
+bentolabs config show
+```
+
+`config show` prints the current values and the path to the config file on disk. Tokens are written by `auth login`, and the default workspace by `workspaces use`. The config file is created with `0600` permissions.
+
+### `version`
+
+Print the installed CLI version.
+
+```bash
+bentolabs version
+```
+
+## Examples
+
+List the 5 most recent traces in the default workspace:
+
+```bash
+bentolabs traces list --limit 5 --output table
+```
+
+Pipe trace IDs into another command:
+
+```bash
+bentolabs traces list --output raw \
+  | jq -r '.items[].id' \
+  | head -20
+```
+
+Call a brand-new endpoint that isn't in your cached command tree yet:
+
+```bash
+bentolabs refresh
+bentolabs <new-group> --help
+```
+
+Send a request that the generated tree doesn't cover:
+
+```bash
+bentolabs raw GET /v1/workspaces/<ws-id>/new-endpoint
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/cli/installation">
+    Install the CLI and sign in.
+  </Card>
+  <Card title="Python SDK" icon="python" href="/python/installation">
+    Send traces and signals from your code.
+  </Card>
+</CardGroup>

@@ -8,64 +8,19 @@ Bento's `bento.track_ai` was modeled on Raindrop's, so most call shapes survive 
 
 ## Migrate with an AI coding tool
 
-Install the Bento docs skill so your AI coding tool has full context. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
+Install Bento's Agent Skills so your AI coding tool knows how to do the migration. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
 
 ~~~markdown
-Help me migrate this project from Raindrop to Bento. Walk it step by step.
-
-## 0. Load context
+Migrate this project from Raindrop to Bento.
 
 ```bash
-npx skills add https://docs.bentolabs.ai
+npx skills add BentoLabs-ai/skills
 ```
 
-Read `https://docs.bentolabs.ai/migrations/raindrop` and `https://docs.bentolabs.ai/python/integrations` before writing any code.
-
-## 1. Discover
-
-```bash
-grep -rnE "import raindrop|from raindrop|raindrop\." --include="*.py" .
-grep -rnE "@raindrop\.(interaction|tool|task)" --include="*.py" .
-grep -rnE "raindrop\.identify|raindrop\.track_signal" --include="*.py" .
-grep -rnE "auto_instrument|tracing_enabled|set_redact_pii" --include="*.py" .
-grep -rnE "RAINDROP_WRITE_KEY" .
-grep -rnE "openai\.|anthropic\.|bedrock-runtime|\.chat\.completions\.create|\.messages\.create" --include="*.py" .
-grep -rnE "from google\.adk|google\.adk\." --include="*.py" .
-```
-
-Summarize every `raindrop.` call site, decorators in use, LLM call sites, and whether ADK is present. Confirm before editing.
-
-## 2. Install Bento alongside Raindrop
-
-```bash
-pip install bentolabs-sdk
-# ADK detected? pip install "bentolabs-sdk[adk]"
-```
-
-Add `BENTOLABS_API_KEY=bl_pk_...` to the env file. Get a key at https://platform.bentolabs.ai. Don't remove Raindrop yet.
-
-## 3. Pick the smoothest path, then fall through
-
-- **Path A — ADK in use?** Add `bento.init(...)` + `bento.instrument()` at startup.
-- **Path B — Raindrop's `auto_instrument=True` was capturing OpenAI / Anthropic / Bedrock?** Preserve that by registering `openinference-instrumentation-<openai|anthropic|bedrock>` against a `BentoLabsSpanProcessor`. Call sites untouched.
-- **Path C — translate the rest manually** per the table at `/migrations/raindrop`. Add `provider=` to every `bento.track_ai` call. `@raindrop.task` → `@bento.tool`. Delete `identify()` and `track_signal()` (no equivalents).
-
-Bedrock model IDs (`anthropic.claude-3-...`) need `provider="aws_bedrock"`, not `"anthropic"`.
-
-## 4. Verify
-
-Run one real flow. At https://platform.bentolabs.ai, confirm the trace shows `user_id`, `convo_id`, `model`, `provider`, `input`, `output`. For short scripts, call `bento.flush()` before exit.
-
-## 5. Remove Raindrop
-
-Only after verify passes:
-
-```bash
-pip uninstall raindrop-ai
-```
-
-Drop the `RAINDROP_WRITE_KEY` env var.
+Use the `bentolabs-migrate` skill. Walk me through it step by step and confirm before editing.
 ~~~
+
+The skill carries the full migration playbook — finding your Raindrop call sites, installing Bento alongside, translating each construct, verifying traces land, then removing Raindrop. The rest of this page is the same translation guide if you'd rather do it by hand.
 
 ## The three paths
 
