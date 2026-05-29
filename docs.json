@@ -103,9 +103,6 @@
               "cli/resources/signals",
               "cli/resources/clusters",
               "cli/resources/deep-search",
-              "cli/resources/drift",
-              "cli/resources/incidents",
-              "cli/resources/fingerprints",
               "cli/resources/agent"
             ]
           },

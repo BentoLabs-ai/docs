@@ -4,7 +4,7 @@ description: "Detectors you describe in plain English: list them, read what they
 icon: "signal"
 ---
 
-A signal is a detector. It watches agent runs and fires when findings match a pattern described in plain English: "the agent retries a failed charge with no backoff," "the assistant goes off-topic." When a signal keeps firing it escalates to an [incident](/cli/resources/incidents). These live under **Signals** in the dashboard.
+A signal is a detector. It watches agent runs and fires when findings match a pattern described in plain English: "the agent retries a failed charge with no backoff," "the assistant goes off-topic." These live under **Signals** in the dashboard.
 
 A signal is a learned classifier, not a hand-written rule. Bento trains it on your own runs through the [Deep Search](/cli/resources/deep-search) loop, and once trained it fires in real time on new runs and backfills history. Each firing is an event, and Bento groups similar events into clusters.
 
@@ -102,7 +102,7 @@ bentolabs signals delete <signal-id>
   <Card title="Clusters" icon="chart-scatter" href="/cli/resources/clusters">
     Groupings of similar findings and signal events.
   </Card>
-  <Card title="Incidents" icon="bell" href="/cli/resources/incidents">
-    What a repeatedly-firing signal escalates to.
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems a signal helps surface.
   </Card>
 </CardGroup>

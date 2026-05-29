@@ -8,7 +8,7 @@ A run is one raw recorded agent run, exactly as it landed in Bento: the bottom o
 
 Once Bento analyzes a run it becomes a [trajectory](/cli/resources/trajectories), which is where findings and issues come from. This page is the layer underneath.
 
-A run is a trace: a request your agent handled, captured whole. It's made of spans, the steps inside it like an LLM call or a tool call, and carries a full body (the complete payload), a [fingerprint](/cli/resources/fingerprints), and links to any [issues](/cli/resources/issues) it contributed to. A run's status is `error` if at least one span reported an error, otherwise `ok`.
+A run is a trace: a request your agent handled, captured whole. It's made of spans, the steps inside it like an LLM call or a tool call, and carries a full body (the complete payload) and links to any [issues](/cli/resources/issues) it contributed to. A run's status is `error` if at least one span reported an error, otherwise `ok`.
 
 The Runs table shows, per run:
 
@@ -117,7 +117,7 @@ bentolabs analytics trace-summary --start 2026-05-01T00:00:00Z --end 2026-05-30T
   <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
     The tracked problems your runs roll up into.
   </Card>
-  <Card title="Fingerprints" icon="fingerprint" href="/cli/resources/fingerprints">
-    The structural signature used to find similar runs.
+  <Card title="Findings" icon="magnifying-glass" href="/cli/resources/findings">
+    The observations Bento extracts from these runs.
   </Card>
 </CardGroup>
