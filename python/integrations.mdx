@@ -19,7 +19,7 @@ bento.instrument()
 That's the whole integration. Run your app — the dashboard fills in immediately.
 
 <Note>
-  For LLM SDKs without an integration (OpenAI, Anthropic, Bedrock, Vertex, etc.), use [`bento.track_ai`](/python/track-ai). The two paths mix freely in the same app.
+  Not on ADK? For raw LLM SDKs (OpenAI, Anthropic, Bedrock, Vertex), use [`bento.track_ai`](/python/track-ai). For a framework that already emits OpenTelemetry (LangChain, LlamaIndex, Pydantic AI, or a TypeScript framework like the Vercel AI SDK or Mastra), see [Export from any framework](/otel-export). All of these mix freely in the same app.
 </Note>
 
 ## Install

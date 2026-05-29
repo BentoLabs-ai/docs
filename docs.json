@@ -26,7 +26,7 @@
           {
             "group": "Overview",
             "icon": "house",
-            "pages": ["index", "quickstart"]
+            "pages": ["index", "quickstart", "otel-export"]
           },
           {
             "group": "CLI",
