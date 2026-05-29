@@ -4,7 +4,7 @@ description: "Pass arbitrary custom dimensions through to span attributes."
 icon: "sliders"
 ---
 
-`properties` lets you attach arbitrary key/value pairs to a span. They pass through as-is (no namespace prefix) so they remain readable by other OTel backends if you ever switch.
+`properties` attaches arbitrary key/value pairs to a span. Values pass through as-is, with no namespace prefix, so they stay readable by other OTel backends after a switch.
 
 ## Usage
 
@@ -22,7 +22,7 @@ bento.track_ai(
 )
 ```
 
-You can also pass `properties` to:
+`properties` is also accepted by:
 
 - `bento.begin(properties=...)`
 - `interaction.update(properties=...)`
@@ -34,7 +34,7 @@ You can also pass `properties` to:
 
 Property values keep their type so downstream filters and aggregates work correctly:
 
-| You pass | Span sees | Why it matters |
+| Value | Span sees | Why it matters |
 |---|---|---|
 | `"foo"` (str) | string |   |
 | `42` (int) | int | dashboard can `experiment_id > 100` |
@@ -47,11 +47,8 @@ Property values keep their type so downstream filters and aggregates work correc
   Don't put `gen_ai.*`, `input.value`, or `output.value` keys in `properties`. The SDK-managed kwargs are written *after* properties and will overwrite them. Use the dedicated kwargs (`user_id`, `model`, `provider`, `input`, `output`, `convo_id`) instead.
 </Warning>
 
-## When to use properties vs built-in kwargs
+## Properties vs built-in kwargs
 
-| Use a built-in kwarg | Use `properties` |
-|---|---|
-| User, conversation, model, provider, input, output | Anything else: feature flags, experiment buckets, latency, retrieved-chunk count |
-| The dashboard has dedicated filters and breakdowns for these | Becomes a generic filter/breakdown dimension |
+User, conversation, model, provider, input, and output have dedicated kwargs, because the dashboard has filters and breakdowns built for them. Everything else goes in `properties`: feature flags, experiment buckets, latency, retrieved-chunk count. Each one becomes a generic filter and breakdown dimension.
 
-If a property turns out to be widely useful, it'll likely get promoted to a first-class column later. For now, anything in `properties` lands in `spans.attributes` as JSONB and is queryable from custom dashboards.
+A property that proves widely useful can get promoted to a first-class column. Until then, anything in `properties` lands in `spans.attributes` as JSONB, queryable from custom dashboards.

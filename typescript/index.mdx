@@ -1,20 +1,30 @@
 ---
 title: "TypeScript SDK"
-description: "Bento TypeScript SDK — coming soon."
+description: "Send TypeScript traces to Bento today via direct export. The dedicated SDK is coming soon."
 icon: "js"
 ---
 
+You don't have to wait for the dedicated SDK to use Bento from a TypeScript app. Because Bento is an OpenTelemetry collector, you can point your framework's own OpenTelemetry exporter straight at Bento — **no Bento package required**.
+
+<Card title="Export from any framework" icon="share-nodes" href="/otel-export">
+  Send traces from the Vercel AI SDK, Mastra, or any OpenTelemetry-emitting framework by pointing its JSON exporter at Bento. This is the recommended path for TypeScript today.
+</Card>
+
+The short version: configure your exporter with the endpoint `${BENTOLABS_BASE_URL}/v1/traces` and the header `Authorization: Bearer ${BENTOLABS_API_KEY}`, using a **JSON** OTLP exporter (Bento doesn't accept protobuf yet). The [Export from any framework](/otel-export) page has copy-paste examples for the Vercel AI SDK and Mastra.
+
+## The dedicated SDK
+
 <Note>
-  The TypeScript SDK is in active development and not yet generally available. Today, Bento officially supports the [Python SDK](/python/installation). If you're shipping a Node or browser agent and want early access, reach out at [support@bentolabs.ai](mailto:support@bentolabs.ai).
+  A dedicated `@bentolabs/sdk` (a drop-in OpenTelemetry span processor, like the Python SDK's `BentoLabsSpanProcessor`) is in active development and not yet generally available. Want early access? Reach out at [support@bentolabs.ai](mailto:support@bentolabs.ai). Until then, use direct export above.
 </Note>
 
-## In the meantime
+## See also
 
 <CardGroup cols={2}>
-  <Card title="Use the Python SDK" icon="python" href="/python/installation">
-    Install, configure, and instrument your Python agents today.
+  <Card title="Export from any framework" icon="share-nodes" href="/otel-export">
+    Point Vercel AI SDK / Mastra at Bento with no SDK.
   </Card>
   <Card title="Attributes" icon="table" href="/concepts/attributes">
-    See how OpenTelemetry GenAI attributes map to the Bento dashboard. Useful when planning your future TypeScript integration.
+    How OpenTelemetry attributes map to dashboard columns.
   </Card>
 </CardGroup>

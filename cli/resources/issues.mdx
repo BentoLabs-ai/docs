@@ -1,0 +1,100 @@
+---
+title: "Issues"
+description: "Triage tracked problems and drill into the trajectories, findings, and signals behind them."
+icon: "circle-exclamation"
+---
+
+An issue is a tracked problem Bento opened for you: a recurring failure mode it grouped across many runs, with a status, a severity, and its evidence attached. It's the front door, where most triage starts, and the `issues` group is usually where you begin.
+
+An issue moves through six statuses, from `new` to `fixing`, `review`, `watching`, `done`, and `ignored`. It carries a severity from `1` (info) to `5` (critical) and a category that names the failure mode: `tool_error`, `incomplete_task`, `wrong_tool_use`, `retry_storm`, `goal_divergence`, or `excessive_cost`. Its evidence is the trajectories, findings, and runs behind it, plus the signals that detect it (the `linked_signal_ids` on the issue). The dashboard shows that evidence in three tabs, trajectories, findings, and signals, and the CLI mirrors them.
+
+## Commands
+
+```bash
+bentolabs issues --help
+```
+
+| Command | What it does |
+|---|---|
+| `issues list` | List issues. Filter by status, category, severity. |
+| `issues get <issue-id>` | One issue, with its `linked_signal_ids` and evidence totals. |
+| `issues list-trajectories <issue-id>` | The analyzed runs attached to the issue. |
+| `issues list-findings <issue-id>` | The observations attached to the issue. |
+| `issues list-runs <issue-id>` | The raw runs that contributed to the issue. |
+| `issues list-activity <issue-id>` | Status changes, comments, and system events. |
+| `issues comment-on <issue-id>` | Add a comment. |
+| `issues change-status <issue-id>` | Move it through the workflow. |
+| `issues create` | Open an issue by hand. |
+| `issues update <issue-id>` | Edit fields like severity or category. |
+
+## Triage an issue
+
+List the open work, then narrow by category or severity to find what matters:
+
+```bash
+bentolabs issues list --status new --output table
+```
+
+```bash
+bentolabs issues list --category tool_error --severity 5 --output table
+```
+
+Open one issue. The response carries its `linked_signal_ids` and the counts behind each evidence tab:
+
+```bash
+bentolabs issues get <issue-id>
+```
+
+Read the evidence in the same order the dashboard shows it. Trajectories are the analyzed runs that exhibit the problem; findings are the observations on top of them:
+
+```bash
+bentolabs issues list-trajectories <issue-id> --output table
+```
+
+```bash
+bentolabs issues list-findings <issue-id> --kind tool_error
+```
+
+Then follow the detectors. Take each id from `linked_signal_ids` and read the signal behind it:
+
+```bash
+bentolabs signals get <signal-id>
+```
+
+## Work an issue
+
+Comment as you go:
+
+```bash
+bentolabs issues comment-on <issue-id> --data '{"body": "Confirmed, retrying on a 429 with no backoff."}'
+```
+
+Move it through the workflow. `to_status` is required; `body` is an optional note:
+
+```bash
+bentolabs issues change-status <issue-id> --data '{"to_status": "fixing", "body": "Picking this up"}'
+```
+
+Edit a field, or open an issue by hand. `create` requires `title`, `summary`, and `category`:
+
+```bash
+bentolabs issues update <issue-id> --data '{"severity": 4}'
+```
+
+```bash
+bentolabs issues create --data '{"title": "Checkout agent loops on payment retry", "summary": "Retries the charge with no backoff until it times out.", "category": "retry_storm", "severity": 4}'
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The analyzed runs an issue points at.
+  </Card>
+  <Card title="Findings" icon="magnifying-glass" href="/cli/resources/findings">
+    The observations extracted from those runs.
+  </Card>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors that tie an issue together.
+  </Card>
+</CardGroup>

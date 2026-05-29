@@ -1,0 +1,79 @@
+---
+title: "Incidents"
+description: "Firing-signal incidents with an acknowledge, assign, resolve lifecycle."
+icon: "bell"
+---
+
+An incident is a live alert Bento opened because a [signal](/cli/resources/signals) kept firing, the thing you get paged on. Where an [issue](/cli/resources/issues) is a problem you triage on your own schedule, an incident is the on-call version: it has an owner, a status, and a clock. In the dashboard this is **Alerts → Incidents**, and the `incidents` group walks the same acknowledge, assign, resolve lifecycle.
+
+An incident starts in `firing`, just opened, with nobody owning it yet. It moves to `acknowledged` once someone has seen it and is looking, then `assigned` once it has an owner working it, then `resolved` when it's handled and the clock stops. The status only moves forward, though you can jump straight to `resolved` from any state. Each incident also carries `severity`, a one-line `summary`, `trigger_type`, `affected_trajectory_count`, and the `acknowledged_by` / `assigned_to` owners.
+
+<Warning>
+  **Every `incidents` command takes `--workspace-id <id>`, not the usual `--workspace`.** The injected `--workspace` flag and your saved default do **not** apply here. Pass `--workspace-id` on every call. (Omit it and you span every workspace you can access, which is rarely what you want.)
+</Warning>
+
+## Commands
+
+```bash
+bentolabs incidents --help
+```
+
+| Command | What it does |
+|---|---|
+| `incidents list` | List incidents. Filter by status, time window, sort. |
+| `incidents get <incident-id>` | Open one incident, with its full transition history. |
+| `incidents acknowledge <incident-id>` | Mark it seen → `acknowledged`. |
+| `incidents assign <incident-id>` | Give it an owner → `assigned`. |
+| `incidents resolve <incident-id>` | Close it out → `resolved`. |
+
+## Work an incident
+
+List what's firing, newest first. Remember `--workspace-id`:
+
+```bash
+bentolabs incidents list --workspace-id <ws-id> --status firing --output table
+```
+
+Sort to the worst first. `--sort-by` takes `severity`, `status`, `affected_trajectory_count`, `owner`, or `opened_at` (default), and `--sort-dir` is `asc` or `desc`:
+
+```bash
+bentolabs incidents list --workspace-id <ws-id> --sort-by severity --sort-dir desc --output table
+```
+
+Open one incident. The response carries the full lifecycle under `transitions`:
+
+```bash
+bentolabs incidents get <incident-id> --workspace-id <ws-id>
+```
+
+Acknowledge it. The body is optional; attach a `note` or call it bare:
+
+```bash
+bentolabs incidents acknowledge <incident-id> --workspace-id <ws-id> --data '{"note": "Looking now."}'
+```
+
+Assign an owner. Pass `assigned_to`, or omit it to take it yourself:
+
+```bash
+bentolabs incidents assign <incident-id> --workspace-id <ws-id> --data '{"assigned_to": "dev@example.com", "note": "You own the payment path."}'
+```
+
+Resolve it:
+
+```bash
+bentolabs incidents resolve <incident-id> --workspace-id <ws-id> --data '{"note": "Fixed the retry backoff; signal quiet for 24h."}'
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors whose repeated firing opens an incident.
+  </Card>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    Tracked problems you triage on your own schedule.
+  </Card>
+  <Card title="Drift" icon="wave-square" href="/cli/resources/drift">
+    Behavioral drift, another thing that can trigger an incident.
+  </Card>
+</CardGroup>

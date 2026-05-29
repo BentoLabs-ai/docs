@@ -1,0 +1,75 @@
+---
+title: "Deep Search"
+description: "Train a new detector from labeled examples."
+icon: "binoculars"
+---
+
+Deep Search is the analyst loop for training a new signal. You describe a failure mode in plain English, Bento surfaces candidate runs that look like it, you label them match or no-match, and you turn those labels into a live classifier. It's how a one-line description becomes a [signal](/cli/resources/signals) that detects the pattern from then on.
+
+A session is one training run. You open it with a natural-language query that names the failure mode you're hunting. `scope` decides which side of the run to match on: `both` (the default), `user`, or `assistant`. Bento ranks your [trajectories](/cli/resources/trajectories) by how similar each is to that description, and you work down the ranked list, giving each candidate a `label` of `match`, `no_match`, or `skip`. Training reads the `match` labels; those positive examples are what the signal learns to detect.
+
+## Commands
+
+```bash
+bentolabs deep-search --help
+```
+
+| Command | What it does |
+|---|---|
+| `deep-search create-session` | Open a session against a plain-English description. Mints the `session_id`. |
+| `deep-search list-candidates <session-id>` | The ranked candidate trajectories. Labeled runs drop off. |
+| `deep-search label-candidate <session-id>` | Record your verdict on one trajectory. |
+| `deep-search create-classifier-signal <session-id>` | Train a signal from the session's `match` labels. |
+| `deep-search get-session <session-id>` | Re-read where a session stands (status, iteration, `signal_id`). |
+
+## Train a signal
+
+Open a session. `query` is required; `scope` defaults to `both`. The response carries the `id` you pass to every command below:
+
+```bash
+bentolabs deep-search create-session --data '{"query": "agent retries a failed payment with no backoff", "scope": "assistant"}'
+```
+
+Pull the candidates, ranked by similarity to the query:
+
+```bash
+bentolabs deep-search list-candidates <session-id> --output table
+```
+
+Label one as `match`, `no_match`, or `skip`. Re-labeling the same trajectory overwrites your prior verdict:
+
+```bash
+bentolabs deep-search label-candidate <session-id> --data '{"trajectory_id": "<trajectory-id>", "label": "match"}'
+```
+
+Repeat for each candidate. Labeled runs drop out, so re-list for a fresh page. When you've collected enough `match` examples, train the signal. `name` is required, `prompt` optional. The response returns the new `signal_id`:
+
+```bash
+bentolabs deep-search create-classifier-signal <session-id> --data '{"name": "Payment retry storm"}'
+```
+
+<Note>
+  Training needs at least one `match` label to learn from. A session with no positive examples returns a 400 asking you to label more.
+</Note>
+
+Check where the session stands at any point:
+
+```bash
+bentolabs deep-search get-session <session-id>
+```
+
+The new detector lives under [signals](/cli/resources/signals) from here. The CLI trains the detector; binding it into a firing alert rule is dashboard-only.
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    Where a trained detector lives. Read it, watch its events, tune it.
+  </Card>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The analyzed runs Deep Search ranks and you label.
+  </Card>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems a signal helps surface and group.
+  </Card>
+</CardGroup>

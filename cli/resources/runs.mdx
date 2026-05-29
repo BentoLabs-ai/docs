@@ -1,0 +1,123 @@
+---
+title: "Runs"
+description: "Browse raw agent runs and read totals and timelines over them."
+icon: "list-tree"
+---
+
+A run is one raw recorded agent run, exactly as it landed in Bento: the bottom of the stack, before any analysis or issue. The dashboard Runs page lists them with charts on top. The `traces` group reads the runs; the `analytics` group reads the totals and timeline above them.
+
+Once Bento analyzes a run it becomes a [trajectory](/cli/resources/trajectories), which is where findings and issues come from. This page is the layer underneath.
+
+A run is a trace: a request your agent handled, captured whole. It's made of spans, the steps inside it like an LLM call or a tool call, and carries a full body (the complete payload) and links to any [issues](/cli/resources/issues) it contributed to. A run's status is `error` if at least one span reported an error, otherwise `ok`.
+
+The Runs table shows, per run:
+
+| Column | What it is |
+|---|---|
+| **Run ID** | The run's identifier, what you pass to `traces get`. |
+| **Top level span** | The outermost step that names the run. |
+| **Model(s)** | The models the run called. |
+| **Linked issues** | Issues this run contributed to. |
+| **# spans · Tokens · Cost · Total time** | The run's rollups. |
+
+The charts come from `analytics`: a summary of totals (total runs and errors) and a timeline histogram of total/error counts bucketed by hour or day.
+
+## Commands
+
+```bash
+bentolabs traces --help        # the runs themselves
+bentolabs analytics --help     # the totals and timeline over them
+```
+
+| Command | What it does |
+|---|---|
+| `traces list` | List runs. Filter by status, tag, model, finding kind, and a lookup query. |
+| `traces get <run-id>` | Open one run: metadata, rollups, status. |
+| `traces get-body <run-id>` | The run's full payload. |
+| `traces list-spans <run-id>` | The steps inside the run. |
+| `traces get-span <span-id>` | Open one span by id. |
+| `traces list-issues <run-id>` | The issues this run contributed to. |
+| `analytics trace-summary` | Totals over a window: total runs, errors. |
+| `analytics trace-timeline` | Bucketed total/error counts for the chart. |
+
+## Browse runs
+
+List the most recent runs:
+
+```bash
+bentolabs traces list --limit 20 --output table
+```
+
+Filter to what matters. `--status` is `ok` or `error`; `--tag`, `--model`, and `--finding-kind` repeat to pass several:
+
+```bash
+bentolabs traces list --status error --finding-kind tool_error --finding-kind timeout --output table
+```
+
+Look up a run by its run ID or trace UUID with `--q`, and bound the window with `--start-time` / `--end-time`:
+
+```bash
+bentolabs traces list --q <run-id> --start-time 2026-05-01T00:00:00Z --end-time 2026-05-30T00:00:00Z
+```
+
+Open one run:
+
+```bash
+bentolabs traces get <run-id>
+```
+
+Read its steps, then open the one you care about. To list only failed steps, pass the span-level `--status ERROR` (uppercase: span status, not run status):
+
+```bash
+bentolabs traces list-spans <run-id> --status ERROR --output table
+```
+
+```bash
+bentolabs traces get-span <span-id>
+```
+
+Read the full payload, or see what the run is linked to:
+
+```bash
+bentolabs traces get-body <run-id>
+```
+
+```bash
+bentolabs traces list-issues <run-id>
+```
+
+## Read the charts
+
+The two `analytics` commands power the totals and the histogram. Both require `--start` and `--end` (ISO datetimes) and take the same filters as the list, so the numbers match the table.
+
+Totals over a window:
+
+```bash
+bentolabs analytics trace-summary --start 2026-05-01T00:00:00Z --end 2026-05-30T00:00:00Z
+```
+
+The timeline histogram. `--bucket` is `hour` (default) or `day`:
+
+```bash
+bentolabs analytics trace-timeline --start 2026-05-01T00:00:00Z --end 2026-05-30T00:00:00Z --bucket day
+```
+
+Scope the charts with the same filters as the table:
+
+```bash
+bentolabs analytics trace-summary --start 2026-05-01T00:00:00Z --end 2026-05-30T00:00:00Z --status error --model gpt-4o
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    What a run becomes after Bento analyzes it.
+  </Card>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems your runs roll up into.
+  </Card>
+  <Card title="Findings" icon="magnifying-glass" href="/cli/resources/findings">
+    The observations Bento extracts from these runs.
+  </Card>
+</CardGroup>

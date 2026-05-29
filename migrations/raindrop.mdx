@@ -4,7 +4,7 @@ description: "Mechanical translation from Raindrop (raindrop-ai) to Bento."
 icon: "/images/raindrop.svg"
 ---
 
-Bento's `bento.track_ai` was modeled on Raindrop's, so most call shapes survive the port unchanged. The two real differences: Bento requires `provider=` on every call, and Bento's native integration ships for Google ADK only — but you can preserve Raindrop's auto-capture story for OpenAI / Anthropic / Bedrock by swapping to OpenInference instrumentors.
+Bento's `bento.track_ai` was modeled on Raindrop's, so most call shapes survive the port unchanged. Two things differ. Bento requires `provider=` on every call, and Bento's native integration ships for Google ADK only. To keep Raindrop's auto-capture for OpenAI, Anthropic, and Bedrock, swap to OpenInference instrumentors.
 
 ## Migrate with an AI coding tool
 
@@ -20,7 +20,7 @@ npx skills add BentoLabs-ai/skills
 Use the `bentolabs-migrate` skill. Walk me through it step by step and confirm before editing.
 ~~~
 
-The skill carries the full migration playbook — finding your Raindrop call sites, installing Bento alongside, translating each construct, verifying traces land, then removing Raindrop. The rest of this page is the same translation guide if you'd rather do it by hand.
+The skill carries the full playbook: find your Raindrop call sites, install Bento alongside, translate each construct, verify traces land, then remove Raindrop. The rest of this page is the same guide if you'd rather do it by hand.
 
 ## The three paths
 
@@ -28,9 +28,9 @@ Pick the smoothest applicable one and fall through. Most migrations end up using
 
 | Path | When | Effort |
 |---|---|---|
-| [A — Google ADK integration](#path-a-google-adk-integration) | ADK is in use | 3 lines at startup |
-| [B — Auto-capture with OpenInference](#path-b-auto-capture-with-openinference) | Raindrop's `auto_instrument=True` captured OpenAI / Anthropic / Bedrock for you | Drop the Raindrop init, register one instrumentor |
-| [C — Manual translation](#path-c-manual-translation) | `@raindrop.interaction` / `@raindrop.tool` / `@raindrop.task`, bare `track_ai` calls | Per-call-site rename, add `provider=` |
+| [A: Google ADK integration](#path-a-google-adk-integration) | ADK is in use | 3 lines at startup |
+| [B: Auto-capture with OpenInference](#path-b-auto-capture-with-openinference) | Raindrop's `auto_instrument=True` captured OpenAI / Anthropic / Bedrock for you | Drop the Raindrop init, register one instrumentor |
+| [C: Manual translation](#path-c-manual-translation) | `@raindrop.interaction` / `@raindrop.tool` / `@raindrop.task`, bare `track_ai` calls | Per-call-site rename, add `provider=` |
 
 ---
 
@@ -58,7 +58,7 @@ That's it. Full reference: [Integrations](/python/integrations).
 
 ## Path B: Auto-capture with OpenInference
 
-Raindrop's `auto_instrument=True` (powered by Traceloop) wrapped OpenAI / Anthropic / Bedrock automatically. Bento preserves the same UX with OpenInference instrumentors registered against a `BentoLabsSpanProcessor`. **Your call sites stay untouched** — every LLM call is captured at the SDK level.
+Raindrop's `auto_instrument=True` (powered by Traceloop) wrapped OpenAI, Anthropic, and Bedrock automatically. You get the same auto-capture from OpenInference instrumentors registered against a `BentoLabsSpanProcessor`. **Your call sites stay untouched.** Every LLM call is captured at the SDK level.
 
 ```bash
 pip install openinference-instrumentation-openai
@@ -79,7 +79,7 @@ trace.set_tracer_provider(provider)
 OpenAIInstrumentor().instrument(tracer_provider=provider)
 ```
 
-Now drop `raindrop.init(...)` and the `auto_instrument=True` flag. Your existing OpenAI call sites are captured by the instrumentor:
+Drop `raindrop.init(...)` and the `auto_instrument=True` flag. The instrumentor captures your OpenAI call sites:
 
 ```python
 from openai import OpenAI
@@ -89,7 +89,7 @@ resp = client.chat.completions.create(model="gpt-4o", messages=[...])
 # Bento captures the call. Nothing else to do.
 ```
 
-For Anthropic / Bedrock: install the matching `openinference-instrumentation-*` and register it the same way.
+For Anthropic and Bedrock, install the matching `openinference-instrumentation-*` and register it the same way.
 
 Full reference: [OTel transport](/python/otel-transport).
 
@@ -114,7 +114,7 @@ For bespoke decorators, manual `track_ai` calls, and identity helpers, translate
 
 | Raindrop | Bento |
 |---|---|
-| `raindrop.track_ai(...)` | `bento.track_ai(...)` — **add `provider=`** |
+| `raindrop.track_ai(...)` | `bento.track_ai(...)`, **add `provider=`** |
 | `raindrop.begin(...)` | `bento.begin(...)` |
 | `interaction.track_tool(...)` | `with interaction.tool_span(...) as ts:` |
 
@@ -124,7 +124,7 @@ For bespoke decorators, manual `track_ai` calls, and identity helpers, translate
 |---|---|
 | `@raindrop.interaction("X")` | `@bento.interaction(event="X")` |
 | `@raindrop.tool("X")` | `@bento.tool(name="X")` |
-| `@raindrop.task("X")` / `task_span(...)` | `@bento.tool` / `tool_span(...)` — no separate "task" kind |
+| `@raindrop.task("X")` / `task_span(...)` | `@bento.tool` / `tool_span(...)`, no separate "task" kind |
 
 ### What's gone
 

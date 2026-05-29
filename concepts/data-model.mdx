@@ -4,38 +4,17 @@ description: "Trajectories, spans, attributes, sessions. The four primitives tha
 icon: "diagram-project"
 ---
 
-Every view in Bento — traces, signals, evaluations, the trace timeline, cost and user breakdowns — is built from four primitives the SDK emits as you run your app. Once you know what each one represents, you can predict how any chart in the product is computed.
+Four primitives carry the whole product, and the SDK emits them as you run your app. Traces, signals, evaluations, the trace timeline, cost and user breakdowns: every view is built from these four. Once you know what each one represents, you can predict how any chart is computed.
 
-## The four primitives
+A [trajectory](/concepts/trajectories) is one run of your agent, the root span of a trace. You open one with `bento.begin(...)` or the `@bento.interaction` decorator. Inside it sit spans. A span is one step within a trajectory: an LLM call, a tool call, or anything you choose to time. LLM calls come from `bento.track_ai(...)`; tool calls come from `bento.tool_span(...)` or the `@bento.tool` decorator.
 
-<CardGroup cols={2}>
-  <Card title="Trajectory" icon="route" href="/concepts/trajectories">
-    One run of your agent. The root span of a trace.
+An [attribute](/concepts/attributes) is a typed key/value pair on a span, and it becomes a column or filter in the dashboard. You set attributes through the kwargs on the calls above, plus `properties={...}` for anything custom. A [session](/concepts/sessions) is every trajectory that shares a `convo_id`. It's a server-side grouping, not an SDK object: pass the same `convo_id` on every call and Bento ties the runs together for you.
 
-    `bento.begin(...)` · `@bento.interaction`
-  </Card>
-  <Card title="Span" icon="bars-staggered">
-    One step inside a trajectory. An LLM call, a tool call, or anything you choose to time.
-
-    `bento.track_ai(...)` · `bento.tool_span(...)` · `@bento.tool`
-  </Card>
-  <Card title="Attribute" icon="table" href="/concepts/attributes">
-    A typed key/value pair on a span. Becomes a column or filter in the dashboard.
-
-    Kwargs on the calls above, plus `properties={...}`
-  </Card>
-  <Card title="Session" icon="users-line" href="/concepts/sessions">
-    All trajectories that share a `convo_id`. A server-side grouping, not an SDK object.
-
-    Pass the same `convo_id` on every call.
-  </Card>
-</CardGroup>
-
-<Note>
-  Under the hood these are OpenTelemetry spans with [OpenInference](https://github.com/Arize-ai/openinference) and [GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) semantic conventions. You can ignore that unless you're wiring Bento into an existing OTel pipeline.
-</Note>
+Under the hood these are OpenTelemetry spans, carrying [OpenInference](https://github.com/Arize-ai/openinference) and [GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) semantic conventions. You can ignore that unless you're wiring Bento into an existing OTel pipeline.
 
 ## How they nest
+
+A session holds the trajectories from one conversation, and each trajectory holds its spans:
 
 ```text
 Session                  ← grouped server-side by convo_id
@@ -51,7 +30,7 @@ A bare `track_ai` call with no surrounding `begin` is its own one-span trajector
 
 ## What gets emitted
 
-Every manual call produces one OTel span. Spans captured by the [Google ADK integration](/python/integrations) (`bento.instrument()`) land in the same columns via OpenInference semantic conventions — you write none of the per-call code in that case. The attributes below land in dashboard columns. Everything else lives in the per-span attributes JSON.
+Every manual call produces one OTel span. Spans captured by the [Google ADK integration](/python/integrations) (`bento.instrument()`) land in the same columns through OpenInference semantic conventions, and you write none of the per-call code in that case. The attributes below land in dashboard columns. Everything else lives in the per-span attributes JSON.
 
 | Concept       | OTel attribute            | Dashboard column |
 |---------------|---------------------------|------------------|
@@ -87,7 +66,7 @@ bento.track_ai(event="turn_1", convo_id="chat_99", user_id="user_42", ...)
 bento.track_ai(event="turn_2", convo_id="chat_99", user_id="user_42", ...)
 ```
 
-Both turns land under one session in the dashboard. `user_id` works the same way: a free-form string passed on every call. We do not store profile data.
+Both turns land under one session in the dashboard. `user_id` works the same way: a free-form string passed on every call. We don't store profile data.
 
 See [Sessions and users](/concepts/sessions) for ID-choosing rules.
 

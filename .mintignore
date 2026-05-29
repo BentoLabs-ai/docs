@@ -5,3 +5,8 @@
 # Draft content
 drafts/
 *.draft.mdx
+
+# Hidden for now (not currently surfaced in the docs)
+cli/resources/drift.mdx
+cli/resources/incidents.mdx
+cli/resources/fingerprints.mdx

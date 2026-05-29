@@ -16,10 +16,10 @@ bento.init(
 bento.instrument()
 ```
 
-That's the whole integration. Run your app — the dashboard fills in immediately.
+That's the whole integration. Run your app and the dashboard fills in immediately.
 
 <Note>
-  For LLM SDKs without an integration (OpenAI, Anthropic, Bedrock, Vertex, etc.), use [`bento.track_ai`](/python/track-ai). The two paths mix freely in the same app.
+  Not on ADK? For raw LLM SDKs (OpenAI, Anthropic, Bedrock, Vertex), use [`bento.track_ai`](/python/track-ai). For a framework that already emits OpenTelemetry (LangChain, LlamaIndex, Pydantic AI, or a TypeScript framework like the Vercel AI SDK or Mastra), see [Export from any framework](/otel-export). All of these mix freely in the same app.
 </Note>
 
 ## Install
@@ -28,24 +28,18 @@ That's the whole integration. Run your app — the dashboard fills in immediatel
 pip install "bentolabs-sdk[adk]"
 ```
 
-The `[adk]` extra pulls in the [OpenInference](https://github.com/Arize-ai/openinference) tracer for ADK. The base wheel stays small; you only pay for what you use.
+The `[adk]` extra pulls in the [OpenInference](https://github.com/Arize-ai/openinference) tracer for ADK. The base wheel stays small.
 
 ## `bento.instrument()`
 
-Call this once, at app startup — after `bento.init(...)`, before any LLM call.
+Call this once at app startup, after `bento.init(...)` and before any LLM call.
 
 ```python
 bento.instrument()           # auto-detects ADK
 bento.instrument("adk")      # explicit
 ```
 
-Returns `"adk"` when activated, or `None` when the `[adk]` extra isn't installed. The call is safe to make more than once: a repeat with the same target is a no-op.
-
-| Behavior | What happens |
-|---|---|
-| Auto-detect (no argument) | Activates ADK if it's installed. |
-| Explicit name (`"adk"`) | Activates ADK. Raises `ValueError` on unknown names; logs a warning and returns `None` if the extra is missing. |
-| Already active | No-op. A second call with a different target logs a warning and is ignored. |
+With no argument, Bento activates ADK if it's installed and returns `"adk"`, or returns `None` when the `[adk]` extra is missing. Passing `"adk"` activates ADK by name. An unknown name raises `ValueError`; a missing `[adk]` extra logs a warning and returns `None`. The call is safe to repeat: a second call with the same target is a no-op, and a second call with a different target logs a warning and is ignored.
 
 `bento.shutdown()` removes every active integration on the way out.
 
@@ -80,9 +74,9 @@ If a getter raises, Bento drops the field for that span and your app keeps runni
 
 For more, see [Configuration → Identity getters](/python/configuration#identity-getters).
 
-## Adding custom events
+## Add custom events
 
-For ad-hoc events alongside the integration — a custom event before or after a model call, an event for a step ADK doesn't emit — wrap each one with [`bento.track_ai`](/python/track-ai). The integration's spans and your manual ones land in the same dashboard.
+For ad-hoc events alongside the integration, wrap each one with [`bento.track_ai`](/python/track-ai): a custom event before or after a model call, or an event for a step ADK doesn't emit. The integration's spans and your manual ones land in the same dashboard.
 
 If you need a single trace to span multiple LLM and tool calls within one turn, see [Trajectories](/python/trajectories) (advanced).
 

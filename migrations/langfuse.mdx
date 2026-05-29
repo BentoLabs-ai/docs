@@ -20,17 +20,13 @@ npx skills add BentoLabs-ai/skills
 Use the `bentolabs-migrate` skill. Walk me through it step by step and confirm before editing.
 ~~~
 
-The skill carries the full migration playbook — finding your Langfuse call sites, installing Bento alongside, translating each construct, verifying traces land, then removing Langfuse. The rest of this page is the same translation guide if you'd rather do it by hand.
+The skill carries the full playbook: it finds your Langfuse call sites, installs Bento alongside, translates each construct, verifies traces land, then removes Langfuse. The rest of this page is the same translation guide, by hand.
 
 ## The three paths
 
-Pick the smoothest applicable one and fall through. Most migrations end up using **B** for the bulk and **C** for a handful of bespoke decorators.
+Pick the smoothest path that applies and fall through to the next. Most migrations land on Path B for the bulk and Path C for a handful of bespoke decorators.
 
-| Path | When | Effort |
-|---|---|---|
-| [A — Google ADK integration](#path-a-google-adk-integration) | ADK is in use | 3 lines at startup |
-| [B — Auto-capture with OpenInference](#path-b-auto-capture-with-openinference) | `langfuse.openai`, `langfuse.langchain`, Anthropic via instrumentor | Drop one import, register one instrumentor |
-| [C — Manual translation](#path-c-manual-translation) | Bespoke `@observe`, `start_as_current_observation`, custom spans | Per-call-site rename |
+If your app runs Google ADK agents, take [Path A](#path-a-google-adk-integration): three lines at startup. If your call sites use `langfuse.openai`, `langfuse.langchain`, or Anthropic through an instrumentor, take [Path B](#path-b-auto-capture-with-openinference): drop one import and register one instrumentor. For bespoke `@observe`, `start_as_current_observation`, or custom spans, [Path C](#path-c-manual-translation) renames them call site by call site.
 
 ---
 
@@ -52,13 +48,13 @@ bento.init(
 bento.instrument()
 ```
 
-That's it. Full reference: [Integrations](/python/integrations).
+That's the whole change. See [Integrations](/python/integrations) for the full reference.
 
 ---
 
 ## Path B: Auto-capture with OpenInference
 
-Langfuse's `from langfuse.openai import OpenAI` (and the `langfuse.langchain.CallbackHandler`) get replaced by an OpenInference instrumentor registered against a `BentoLabsSpanProcessor`. **Your call sites stay untouched** — every LLM call is captured at the SDK level.
+Replace Langfuse's `from langfuse.openai import OpenAI` (and the `langfuse.langchain.CallbackHandler`) with an OpenInference instrumentor registered against a `BentoLabsSpanProcessor`. Your call sites stay untouched, since Bento captures every LLM call at the SDK level.
 
 ```bash
 pip install openinference-instrumentation-openai
@@ -79,7 +75,7 @@ trace.set_tracer_provider(provider)
 OpenAIInstrumentor().instrument(tracer_provider=provider)
 ```
 
-Now replace `from langfuse.openai import OpenAI` with the stock import — the instrumentor wraps the client automatically:
+Now swap `from langfuse.openai import OpenAI` for the stock import. The instrumentor wraps the client for you:
 
 ```python
 from openai import OpenAI
@@ -89,9 +85,9 @@ resp = client.chat.completions.create(model="gpt-4o", messages=[...])
 # Bento captures the call. Nothing else to do.
 ```
 
-For LangChain: drop the `CallbackHandler` and register `LangChainInstrumentor()` the same way. For Anthropic / Bedrock: install the matching `openinference-instrumentation-*` and register it.
+For LangChain, drop the `CallbackHandler` and register `LangChainInstrumentor()` the same way. For Anthropic or Bedrock, install the matching `openinference-instrumentation-*` and register it.
 
-Full reference: [OTel transport](/python/otel-transport).
+See [OTel transport](/python/otel-transport) for the full reference.
 
 ---
 
@@ -143,9 +139,7 @@ For bespoke `@observe()` decorators, manual context managers, and identity helpe
 
 ## Watch out for
 
-- **`session_id` vs `convo_id`.** Bento uses `session_id` everywhere except `bento.track_ai`, which uses `convo_id`. Same attribute under the hood.
-- **`metadata` → `properties`.** Direct rename. Langfuse magic keys (`langfuse_user_id`, etc.) don't exist; use the real kwargs.
-- **No OpenAI drop-in.** Use Path B (OpenInference) instead of trying to find a `from bento.openai import OpenAI` equivalent.
+A few renames don't map one to one. Bento uses `session_id` everywhere except `bento.track_ai`, which uses `convo_id`; it's the same attribute under the hood. Langfuse `metadata` becomes `properties`, a direct rename, but the magic keys like `langfuse_user_id` don't exist, so pass the real kwargs instead. And there's no OpenAI drop-in: reach for Path B (OpenInference) rather than hunting for a `from bento.openai import OpenAI` equivalent.
 
 ## Side-by-side
 

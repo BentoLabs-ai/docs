@@ -4,19 +4,15 @@ description: "Late-bind user_id, session_id, and tags onto open spans, or scope 
 icon: "user-tag"
 ---
 
-<Note>
-  Most apps should set identity once at `bento.init(...)` — see [Configuration → Identity getters](/python/configuration#identity-getters). The helpers on this page cover the rare cases where init-time getters aren't enough.
-</Note>
+These helpers set `user_id`, `session_id`, and `tags` after a span is already open, or scope them to one task. The cleanest place to set identity is the getter callables on [`bento.init()`](/python/configuration#identity-getters), which fire on every span, including ones captured by an [integration](/python/integrations). The helpers here cover the cases those getters don't fit:
 
-The cleanest place to set `user_id`, `session_id`, and `tags` is the getter callables on [`bento.init()`](/python/configuration#identity-getters) — they fire on every span, including ones captured by an [integration](/python/integrations). The helpers on this page exist for the cases where init-time getters aren't a good fit:
-
-- Identity becomes known mid-flow (e.g. after authentication inside an open trajectory).
-- A worker received identity over a queue and you want to scope it to one handler invocation.
-- You want to patch arbitrary attributes onto the currently-active span without restructuring the call site.
+- Identity becomes known mid-flow, such as after authentication inside an open trajectory.
+- A worker receives identity over a queue and the value should scope to one handler invocation.
+- An arbitrary attribute belongs on the currently active span without restructuring the call site.
 
 ## update_current_trace
 
-Patch the OPEN trajectory's root span. Use this when identity is known mid-flow and you want it reflected at the trace level (`traces.user_id`, `traces.session_id`, `traces.tags`).
+Patches the open trajectory's root span. Applies when identity becomes known mid-flow and belongs at the trace level (`traces.user_id`, `traces.session_id`, `traces.tags`).
 
 ```python
 import bentolabs_sdk as bento
@@ -27,7 +23,7 @@ with bento.begin(event="user_turn") as interaction:
     # rest of the work
 ```
 
-Keys are SDK-defined (`gen_ai.user.id`, `gen_ai.conversation.id`, `langfuse.tags`); you supply values.
+The keys are SDK-defined (`gen_ai.user.id`, `gen_ai.conversation.id`, `langfuse.tags`); the values come from the call.
 
 <ParamField path="user_id" type="str">
   Sets `gen_ai.user.id` on the trajectory root.
@@ -46,12 +42,12 @@ Keys are SDK-defined (`gen_ai.user.id`, `gen_ai.conversation.id`, `langfuse.tags
 </ParamField>
 
 <Info>
-  No-op when no `bento.begin(...)` is open in the current task. If you're emitting bare `track_ai` calls, pass the values directly to `track_ai` instead.
+  No-op when no `bento.begin(...)` is open in the current task. For bare `track_ai` calls, set the values directly on `track_ai` instead.
 </Info>
 
 ## update_current_span
 
-Set attributes on the currently active OTel span — the innermost open span, which may or may not be the trajectory root.
+Sets attributes on the currently active OTel span, the innermost open span, which may or may not be the trajectory root. Applies when a property belongs on the inner span and there's no direct handle to it, such as deep helper functions or callbacks invoked by an integration.
 
 ```python
 with bento.tool_span("web_search") as ts:
@@ -59,26 +55,22 @@ with bento.tool_span("web_search") as ts:
     bento.update_current_span(properties={"result_count": len(results), "cache_hit": False})
 ```
 
-Use this when you want a property pinned to the inner span and don't have a direct handle to it (deep helper functions, callbacks invoked by an integration).
+It reads OTel's current context, so it sees integration-captured spans too. Called inside a callback that ADK invokes, it writes the property onto that span.
 
 <ParamField path="properties" type="dict">
-  Keys/values written to the currently active span. Same type-fidelity rules as `track_ai(properties=...)` — see [Properties](/python/properties#type-fidelity).
+  Keys/values written to the currently active span. Same type-fidelity rules as `track_ai(properties=...)`; see [Properties](/python/properties#type-fidelity).
 </ParamField>
-
-<Tip>
-  `update_current_span` reads OTel's current context, so it sees integration-captured spans too. Calling it inside a callback that ADK invokes will write the property onto that span.
-</Tip>
 
 ## propagate_attributes
 
-Scoped identity override for the current task. Per-task overrides take precedence over the global getters registered at `init()`.
+Scopes an identity override to the current task. Per-task overrides take precedence over the global getters registered at `init()`. Applies when the framework-state pattern doesn't fit, such as a worker that received identity over a message queue and scopes it to one handler invocation.
 
 ```python
 with bento.propagate_attributes(user_id="u_42", session_id="conv_99"):
     await agent.run(query)        # every span tagged automatically
 ```
 
-Use this when the framework-state pattern doesn't apply — e.g. inside a worker that received identity over a message queue and wants to scope it to one handler invocation.
+The block restores the prior values on exit, and identity sources registered at `init()` resume after it.
 
 ### Three-value kwargs
 
@@ -90,16 +82,14 @@ Each kwarg accepts three distinct values:
 | A value (e.g. `user_id="u_42"`) | Use this value for the scope. |
 | Explicit `None` | Clear the field for the scope, shadowing any outer override and skipping the global source. |
 
-Restores the prior values on exit. Identity sources registered at `init()` resume after the block.
-
 ## How they compose
 
 The SDK resolves identity in this order, highest priority first:
 
-1. **Explicit kwarg on the call** — `bento.track_ai(user_id="x", ...)` or `bento.begin(user_id="x", ...)` always wins.
+1. **Explicit kwarg on the call**: `bento.track_ai(user_id="x", ...)` or `bento.begin(user_id="x", ...)` always wins.
 2. **`update_current_trace(...)`** patches set on the trajectory root.
 3. **`propagate_attributes(...)`** scope active in the current task.
-4. **Init-time getters** — `bento.init(user_id=lambda: ...)` resolved per span.
+4. **Init-time getters**: `bento.init(user_id=lambda: ...)` resolved per span.
 
 The first source that returns a non-`None` value at span-emit time is the one that lands in the dashboard.
 
@@ -107,7 +97,7 @@ The first source that returns a non-`None` value at span-emit time is the one th
 
 <CardGroup cols={2}>
   <Card title="Integrations" icon="plug" href="/python/integrations">
-    Identity getters at `init()` — the zero-code path.
+    Identity getters at `init()`, the zero-code path.
   </Card>
   <Card title="Trajectories" icon="diagram-project" href="/python/trajectories">
     Open a `begin()` block to host `update_current_trace` patches.

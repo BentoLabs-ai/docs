@@ -4,6 +4,8 @@ description: "Environment variables, init(), and credential rotation."
 icon: "gear"
 ---
 
+The SDK reads its credentials from the environment and starts on the first call. `init()` overrides that: it accepts credentials in code, pays setup cost up front, and registers identity getters.
+
 ## Environment variables
 
 | Variable | Default | Notes |
@@ -13,7 +15,7 @@ icon: "gear"
 
 ## In-code config
 
-`init()` kwargs override env vars:
+`init()` kwargs override env vars.
 
 ```python
 import bentolabs_sdk.analytics as bento
@@ -21,11 +23,11 @@ import bentolabs_sdk.analytics as bento
 bento.init(api_key="bl_pk_explicit", base_url="http://localhost:8080")
 ```
 
-`init()` is optional if you only use `bento.track_ai`. The first call lazy-initializes from env vars. Call `init()` explicitly when you want to pay setup cost up front (cold-start sensitive workloads), pass credentials from code, or **register identity getters** (the next section). For [integrations](/python/integrations), always call `bento.init()` before `bento.instrument()` so the getters are registered before the first captured call.
+`init()` is optional if you only use `bento.track_ai`. The first call lazy-initializes from env vars. Call `init()` explicitly to pay setup cost up front (cold-start sensitive workloads), pass credentials from code, or **register identity getters** (the next section). For [integrations](/python/integrations), call `bento.init()` before `bento.instrument()` so the getters are registered before the first captured call.
 
 ## Identity getters
 
-`init()` accepts `user_id`, `session_id`, and `tags` kwargs. Bento invokes them on every span — whether captured by an integration or emitted by `bento.track_ai` — and writes the result to `gen_ai.user.id`, `gen_ai.conversation.id`, and `langfuse.tags`.
+`init()` accepts `user_id`, `session_id`, and `tags` kwargs. Bento invokes them on every span, whether captured by an integration or emitted by `bento.track_ai`, and writes the result to `gen_ai.user.id`, `gen_ai.conversation.id`, and `langfuse.tags`.
 
 ```python
 bento.init(
@@ -71,7 +73,7 @@ See [Integrations → Identity at init](/python/integrations#identity-at-init) f
 
 ## Errors
 
-The SDK raises `BentoAuthError` with a typed `code` for fail-fast cases:
+The SDK raises `BentoAuthError` with a typed `code` for fail-fast cases.
 
 ```python
 from bentolabs_sdk import BentoAuthError
@@ -99,7 +101,7 @@ except BentoAuthError as exc:
 
 ## Resolution helpers
 
-For tools that need to know the resolved config without standing up a tracer:
+For tools that need the resolved config without standing up a tracer:
 
 ```python
 from bentolabs_sdk import resolve_options

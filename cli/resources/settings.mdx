@@ -1,0 +1,151 @@
+---
+title: "Workspace settings"
+description: "Workspaces, members, API keys, notification channels, and extraction config."
+icon: "gear"
+---
+
+A **workspace** is the tenant everything in Bento lives under: runs, trajectories, signals, issues. From here you manage members, mint the API keys that push runs in and read data out, wire up where alerts get delivered, and tune how findings are extracted. In the dashboard this is **Settings**, and the CLI splits it across four command groups: `workspaces`, `api-keys`, `notification-channels`, and `workspace-extraction-config`.
+
+<Note>
+  The CLI signs in as **you** (`bentolabs auth login`), not with an API key, so these owner-level commands work as your dashboard login does. API keys are a separate credential your *app* uses to send runs in.
+
+  Most commands here need a workspace; set a default once with `bentolabs workspaces use <ws-id>` (see [Installation](/cli/installation)). A few don't: `workspaces create` / `list`, `api-keys revoke`, and the by-id notification-channel commands.
+</Note>
+
+## Workspaces
+
+The `workspaces` group lists the tenants you belong to and manages their members. In the dashboard this is **Settings → General** and **Members**.
+
+```bash
+bentolabs workspaces --help
+```
+
+| Command | What it does |
+|---|---|
+| `workspaces list` | List the workspaces you belong to. |
+| `workspaces create` | Create a new workspace (no workspace selected needed). |
+| `workspaces update` | Rename the selected workspace. |
+| `workspaces list-users` | List the workspace's members. |
+| `workspaces remove-member <user-id>` | Remove a member. |
+
+See what you can reach, or create a workspace (`name` is the only field):
+
+```bash
+bentolabs workspaces list --output table
+```
+
+```bash
+bentolabs workspaces create --data '{"name": "Acme Prod"}'
+```
+
+List the members of the selected workspace, or remove one by `user_id`:
+
+```bash
+bentolabs workspaces list-users --output table
+```
+
+```bash
+bentolabs workspaces remove-member <user-id>
+```
+
+## API keys
+
+A key is the credential your app uses to push OTLP runs into a workspace and read data back out, and it's what you hand to the SDK or OTLP exporter. See [Sources & sync](/cli/resources/sources) for where runs come from. Keys are scoped to the selected workspace, and the dashboard lists them under **Settings → API keys**.
+
+```bash
+bentolabs api-keys --help
+```
+
+| Command | What it does |
+|---|---|
+| `api-keys list` | List the keys in the workspace (prefixes and metadata, never the secret). |
+| `api-keys create` | Mint a new key. The full secret is returned **once**, so copy it on create. |
+| `api-keys revoke <key-id>` | Revoke a key by id (not workspace-scoped). |
+
+Mint a key. The body takes an optional `name`, and the response carries the secret, shown only on create:
+
+```bash
+bentolabs api-keys create --data '{"name": "ci-pipeline"}'
+```
+
+Revoke one by id:
+
+```bash
+bentolabs api-keys revoke <key-id>
+```
+
+## Notification channels
+
+An `email` or `slack` target an incident can be delivered to, with a test send and a last-delivery status. In the dashboard these live under **Settings → Notifications**. `list` and `create` are workspace-scoped; `get`, `update`, `delete`, `test`, and `get-last-delivery` act on one channel by id.
+
+```bash
+bentolabs notification-channels --help
+```
+
+| Command | What it does |
+|---|---|
+| `notification-channels list` | List the channels in the workspace. |
+| `notification-channels create` | Create a channel (`email` or `slack`). |
+| `notification-channels get <channel-id>` | Read one channel. |
+| `notification-channels update <channel-id>` | Edit a channel: toggle, rename, rotate the webhook. |
+| `notification-channels delete <channel-id>` | Delete a channel. |
+| `notification-channels test <channel-id>` | Send a test notification. |
+| `notification-channels get-last-delivery <channel-id>` | The most recent delivery and its status. |
+
+Create a channel. `channel_type` is required, and `slack` needs a `config` carrying `webhook_url`:
+
+```bash
+bentolabs notification-channels create --data '{"channel_type": "slack", "name": "Alerts", "config": {"webhook_url": "https://hooks.slack.com/services/T000/B000/XXXX"}}'
+```
+
+An email channel needs no config:
+
+```bash
+bentolabs notification-channels create --data '{"channel_type": "email"}'
+```
+
+Send a test, check the last delivery, toggle a channel off, or delete it:
+
+```bash
+bentolabs notification-channels test <channel-id>
+```
+
+```bash
+bentolabs notification-channels update <channel-id> --data '{"enabled": false}'
+```
+
+<Warning>
+  Creating a channel is CLI-doable, but **binding a signal to a channel into a firing alert rule is dashboard-only**, with no `alert-rules` group. Set the rule up in the dashboard. See [Signals](/cli/resources/signals).
+</Warning>
+
+## Extraction config
+
+Per-workspace rules for how findings get extracted from runs: a `canonical_view_whitelist` (which parts of a run to surface as context) and `keyword_rules` (named keyword matchers). `put` is a full replacement. In the dashboard this lives under **Monitoring settings**.
+
+```bash
+bentolabs workspace-extraction-config --help
+```
+
+Read the current config, then replace it. Send the complete shape, since `put` upserts both fields together:
+
+```bash
+bentolabs workspace-extraction-config get
+```
+
+```bash
+bentolabs workspace-extraction-config put --data '{"canonical_view_whitelist": {"sources": {"trace.input": {"include": true, "keys": []}}}, "keyword_rules": [{"name": "refunds", "keywords": ["refund", "chargeback"]}]}'
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Sources & sync" icon="plug" href="/cli/resources/sources">
+    Where runs come from. API keys authorize pushing them in.
+  </Card>
+  <Card title="Runs" icon="list-tree" href="/cli/resources/runs">
+    The raw agent runs that land in a workspace.
+  </Card>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors whose firings notification channels deliver.
+  </Card>
+</CardGroup>

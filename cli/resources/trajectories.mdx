@@ -1,0 +1,97 @@
+---
+title: "Trajectories"
+description: "Browse analyzed runs: filter by suspicious, win, or errored, and read their findings."
+icon: "route"
+---
+
+A trajectory is one agent run after Bento has assembled and analyzed it. Take a raw [run/trace](/cli/resources/runs), let Bento reason over its steps, and the result is a trajectory: the run plus Bento's read on whether it looks suspicious, whether it's a win, whether tools errored, and the [findings](/cli/resources/findings) extracted from it. Trajectories are the **Monitoring** page in the dashboard, the list of analyzed runs to scan for trouble. The SDK-side concept of how a run is grouped lives in [Trajectories (concept)](/concepts/trajectories).
+
+Each trajectory carries a status, `open` while the run is in flight or `finalized` once it's complete. Suspicious and win are flags Bento's analysis sets, not values to assign by hand; the same goes for errors, surfaced as `tool_error_count`, and findings, counted as `findings_count`. Extraction status reports where summarization stands: `done`, `pending`, `failed`, or `skipped`. The `trajectories` group is read-only, so the commands filter and read. Triage happens under [issues](/cli/resources/issues).
+
+## The commands
+
+```bash
+bentolabs trajectories --help
+```
+
+| Command | What it does |
+|---|---|
+| `trajectories list` | List analyzed runs. Filter by suspicious, win, errors, findings, status. |
+| `trajectories get <trajectory-id>` | Open one trajectory, the full run with its step-by-step spans. |
+| `trajectories list-findings <trajectory-id>` | The observations extracted from that run. |
+
+## Browse analyzed runs
+
+List recent trajectories, priority-ordered so summarized rows with findings come first:
+
+```bash
+bentolabs trajectories list --output table
+```
+
+Filter to what needs a look. Booleans toggle with `--flag` / `--no-flag`:
+
+```bash
+bentolabs trajectories list --is-suspicious --output table
+```
+
+```bash
+bentolabs trajectories list --has-errors --output table
+```
+
+```bash
+bentolabs trajectories list --has-findings --output table
+```
+
+```bash
+bentolabs trajectories list --is-win --output table
+```
+
+Filter by completion state. `--status` is `open` or `finalized`:
+
+```bash
+bentolabs trajectories list --status finalized --output table
+```
+
+Sort and search. `--sort-by` takes `priority` (default), `newest`, `findings`, `duration`, `errors`, or `tools`; `--q` searches summaries, intent, session, and trace id:
+
+```bash
+bentolabs trajectories list --sort-by findings --q "refund" --output table
+```
+
+Scope to a window and page through it:
+
+```bash
+bentolabs trajectories list --start-time 2026-05-01T00:00:00Z --limit 100 --output table
+```
+
+<Tip>
+  By default the list shows only **summarized** runs (`--extraction-status` defaults to `done`). To see runs Bento hasn't finished analyzing, pass `--extraction-status all` (or `pending`, `failed`, `skipped`).
+</Tip>
+
+## Open one run
+
+Get the trajectory. The response carries its status, flags, counts, and full step-by-step spans:
+
+```bash
+bentolabs trajectories get <trajectory-id>
+```
+
+Read its findings:
+
+```bash
+bentolabs trajectories list-findings <trajectory-id> --output table
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Runs" icon="list-tree" href="/cli/resources/runs">
+    The raw recorded runs a trajectory is built from.
+  </Card>
+  <Card title="Findings" icon="magnifying-glass" href="/cli/resources/findings">
+    The observations extracted from a trajectory.
+  </Card>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems a trajectory rolls up to.
+  </Card>
+</CardGroup>
