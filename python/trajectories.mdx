@@ -1,16 +1,14 @@
 ---
 title: "Trajectories"
-description: "Group multi-step work into a single trace. Advanced — most apps don't need this."
+description: "Group multi-step work into a single trace. Advanced, most apps don't need this."
 icon: "diagram-project"
 ---
 
-<Note>
-  This is an advanced feature. For most apps, an [integration](/python/integrations) or [tracking events](/python/track-ai) is enough. Reach for trajectories only when you need a single trace to span multiple LLM calls and tool calls within one logical "turn".
-</Note>
-
 A **trajectory** is one OTel span that stays open across a multi-step turn. Subsequent `bento.track_ai` and `tool_span` calls in the same task become children of it, so the whole flow shows up as one trace instead of N independent rows.
 
-When [`bento.instrument()`](/python/integrations) is active, spans the Google ADK integration captures share the trajectory's `trace_id` too — one `with bento.begin(...)` block stitches manual and integration spans into one trace.
+This is an advanced feature. For most apps, an [integration](/python/integrations) or [tracking events](/python/track-ai) is enough. Trajectories matter when one trace must span multiple LLM calls and tool calls within a single logical turn.
+
+When [`bento.instrument()`](/python/integrations) is active, spans the Google ADK integration captures share the trajectory's `trace_id`. One `with bento.begin(...)` block stitches manual and integration spans into one trace.
 
 ## bento.begin()
 
@@ -44,10 +42,6 @@ interaction = bento.begin(event="user_turn", user_id="u1", input="...")
 interaction.finish(output="...")
 ```
 
-<Tip>
-  `interaction.event_id` is the trajectory's span ID (16-hex). Useful for logging or correlating with downstream systems.
-</Tip>
-
 ### Parenting and isolation
 
 Trajectories detach from any outer OTel context, the same as a bare `track_ai`. So they're root spans in their own trace even when called inside a customer's existing FastAPI / Django / etc. instrumented stack. `track_ai` calls *inside* a `begin()/finish()` block parent to the trajectory.
@@ -58,11 +52,11 @@ Trajectories detach from any outer OTel context, the same as a bare `track_ai`. 
 
 ## Decorators
 
-The most ergonomic way to wrap function-shaped work. Both decorators work on sync and async functions.
+Both decorators wrap function-shaped work, and both work on sync and async functions.
 
 ### @bento.interaction
 
-Wraps a function in `bento.begin()` / `interaction.finish()`. The function name becomes the event name; the return value becomes `output.value`.
+Wraps a function in `bento.begin()` / `interaction.finish()`. The function name becomes the event name; the return value becomes `output.value`. It does **not** auto-capture arguments, which are often non-trivial to serialize and frequently contain sensitive data. To record them, call `interaction.update(input=...)` from inside the function, or use `@bento.tool`, which does capture.
 
 ```python
 @bento.interaction
@@ -74,10 +68,6 @@ def handle_message(msg: str) -> str:
     ...
 ```
 
-<Info>
-  `@bento.interaction` does **not** auto-capture arguments. They're often non-trivial to serialize and frequently contain sensitive data. Use `interaction.update(input=...)` from inside the function, or use `@bento.tool` (which does capture).
-</Info>
-
 | Option | Default | Effect |
 |---|---|---|
 | `event` | function name | Override the event name. |
@@ -85,7 +75,7 @@ def handle_message(msg: str) -> str:
 
 ### @bento.tool
 
-Wraps a function in `bento.tool_span(...)`. The function's bound arguments become `input.value` (as a JSON dict), and the return value becomes `output.value`. The span carries `openinference.span.kind="tool"` so downstream classification picks it up.
+Wraps a function in `bento.tool_span(...)`. The function's bound arguments become `input.value` (as a JSON dict), and the return value becomes `output.value`. The span carries `openinference.span.kind="tool"` so downstream classification picks it up. Set `capture_input=False` or `capture_output=False` for sensitive args or huge return payloads.
 
 ```python
 @bento.tool
@@ -103,13 +93,9 @@ def web_search(query: str) -> list[str]:
 | `capture_input` | `True` | Capture bound arguments as `input.value`. `self`/`cls` are dropped. |
 | `capture_output` | `True` | Set the return value as `output.value`. |
 
-<Tip>
-  Set `capture_input=False` or `capture_output=False` for sensitive args or huge return payloads.
-</Tip>
-
 ## Tool spans
 
-When you want a tool span without threading an `Interaction` handle through your code, use the module-level helper:
+The module-level helper opens a tool span without threading an `Interaction` handle through code:
 
 ```python
 with bento.tool_span("web_search", input={"q": "..."}) as ts:
@@ -117,11 +103,11 @@ with bento.tool_span("web_search", input={"q": "..."}) as ts:
     ts.set_output(result)
 ```
 
-Same parenting rule as `track_ai`: parents to the active trajectory if `begin()` is open in this task, else becomes a detached root.
-
-Exceptions raised inside the block are recorded on the span (status=ERROR, exception event) and re-raised.
+Same parenting rule as `track_ai`: parents to the active trajectory if `begin()` is open in this task, else becomes a detached root. Exceptions raised inside the block are recorded on the span (status=ERROR, exception event) and re-raised.
 
 ### ToolSpan API
+
+A `ToolSpan` carries two methods:
 
 | Method | Purpose |
 |---|---|
@@ -129,6 +115,8 @@ Exceptions raised inside the block are recorded on the span (status=ERROR, excep
 | `ts.set_attribute(key, value)` | Escape hatch for arbitrary OTel attributes. |
 
 ## Interaction API
+
+An `Interaction` is the handle `begin()` returns:
 
 | Method | Purpose |
 |---|---|

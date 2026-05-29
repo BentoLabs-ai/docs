@@ -4,7 +4,7 @@ description: "Wrap any LLM or tool call with bento.track_ai. Manual events for S
 icon: "code"
 ---
 
-`bento.track_ai` is the manual path. Call it once per LLM site you want in Bento. Use it for SDKs without an [integration](/python/integrations) — OpenAI, Anthropic, Bedrock, Vertex, anything else — or alongside an integration for custom events.
+`bento.track_ai` is the manual path. Call it once per LLM site you want in Bento. Use it for SDKs without an [integration](/python/integrations) (OpenAI, Anthropic, Bedrock, Vertex, anything else), or alongside an integration for custom events.
 
 ```python
 import bentolabs_sdk.analytics as bento
@@ -145,7 +145,7 @@ bento.track_ai(
 
 `bento.track_ai` calls are root spans by default. They detach from any caller's OTel context, so calling `track_ai` inside a FastAPI or Django request doesn't pull the LLM event into that trace.
 
-Inside a [`bento.begin(...)`](/python/trajectories) block, `track_ai` calls become children of the trajectory instead — the whole multi-step turn renders as one trace.
+Inside a [`bento.begin(...)`](/python/trajectories) block, `track_ai` calls become children of the trajectory instead, so the whole multi-step turn renders as one trace.
 
 ## See also
 

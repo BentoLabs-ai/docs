@@ -1,0 +1,87 @@
+---
+title: "Agent"
+description: "Drive Bento's in-product AI agent from the terminal."
+icon: "robot"
+---
+
+Bento ships an in-product AI agent, the Agent page in the dashboard, that investigates your runs, issues, and signals for you. Ask it a question and it digs through the evidence and answers. The `agent` group drives that same agent from your terminal: open a conversation, send a message, then read or stream the reply.
+
+The agent already knows your workspace, so you don't hand it any context. You talk to it in a conversation, the thread that holds a title and its messages. Each message kicks off a turn, one run of the agent for that message. A turn does real work, reading your runs, issues, and signals before it answers, so it runs in the background: you send the message, get a `turn_id` back right away, then read or stream that turn as it finishes. Each entry in the thread is a message, yours or the agent's reply. Sometimes a turn proposes a confirmation, an action the agent wants to take that needs your `approved` or `rejected` sign-off.
+
+## Commands
+
+```bash
+bentolabs agent --help
+```
+
+| Command | What it does |
+|---|---|
+| `agent list-conversations` | List your conversations. Page with `--limit` / `--offset`. |
+| `agent create-conversation` | Start a new conversation. |
+| `agent get-conversation <conversation-id>` | Open one conversation with its messages. |
+| `agent enqueue-chat` | Send a message. Returns the `turn_id` to read next. |
+| `agent get-turn <turn-id>` | Read a turn and its events once. |
+| `agent stream-turn <turn-id>` | Stream a turn's events as they happen. |
+| `agent confirm-action-route` | Approve or reject an action the agent proposed. |
+
+## Talk to the agent
+
+Start a conversation. `title` is optional; leave it off and the agent names it:
+
+```bash
+bentolabs agent create-conversation --data '{"title": "Prod incident triage"}'
+```
+
+Send a message. `message` is required; pass the `conversation_id` to keep the thread going. Skip the first step entirely by calling `enqueue-chat` with only a `message`, and the agent starts a fresh conversation and returns both ids. The response carries the `turn_id`:
+
+```bash
+bentolabs agent enqueue-chat --data '{"conversation_id": "<conversation-id>", "message": "Why did our checkout agent start failing today?"}'
+```
+
+Read the turn once it has run in the background:
+
+```bash
+bentolabs agent get-turn <turn-id>
+```
+
+Or stream its events live as the agent works. Resume from where you left off with `--after-seq`:
+
+```bash
+bentolabs agent stream-turn <turn-id> --after-seq 42
+```
+
+## Review the thread
+
+List your conversations, newest activity first:
+
+```bash
+bentolabs agent list-conversations --limit 20 --output table
+```
+
+Open one to read its full message history:
+
+```bash
+bentolabs agent get-conversation <conversation-id>
+```
+
+## Confirm an action
+
+When the agent proposes an action that needs sign-off, answer with a decision. `conversation_id` and `action` are required; `decision` is `approved` or `rejected`:
+
+```bash
+bentolabs agent confirm-action-route --data '{"conversation_id": "<conversation-id>", "action": "<action>", "decision": "approved"}'
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems the agent investigates.
+  </Card>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors behind those problems.
+  </Card>
+  <Card title="Overview" icon="compass" href="/cli/overview">
+    What the CLI is and how the groups fit together.
+  </Card>
+</CardGroup>

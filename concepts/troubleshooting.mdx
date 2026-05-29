@@ -4,115 +4,117 @@ description: "What to check when track_ai doesn't show up in the dashboard, or w
 icon: "wrench"
 ---
 
+When `track_ai` data doesn't show up or lands wrong, the cause is usually one of a handful of things. Find your symptom below.
+
 ## Nothing shows up in the dashboard
 
-Walk this list top to bottom. The fix is almost always one of these five.
+Walk these five top to bottom. The fix is almost always one of them.
 
-<AccordionGroup>
-  <Accordion title="1. Did you call flush() before exit?">
-    The exporter batches spans. On `os._exit()`, a Lambda timeout, or a script ending right after `track_ai`, the daemon worker is killed before its next 5-second tick and the queue is lost.
+### You didn't call flush() before exit
 
-    ```python
-    import bentolabs_sdk.analytics as bento
-    bento.track_ai(...)
-    bento.flush()  # or bento.shutdown() which flushes too
-    ```
+The exporter batches spans. On `os._exit()`, a Lambda timeout, or a script that ends right after `track_ai`, the daemon worker is killed before its next 5-second tick and the queue is lost. Flush before you exit:
 
-    Long-running services don't need this. `atexit` runs the shutdown automatically.
-  </Accordion>
+```python
+import bentolabs_sdk.analytics as bento
+bento.track_ai(...)
+bento.flush()  # or bento.shutdown() which flushes too
+```
 
-  <Accordion title="2. Is BENTOLABS_API_KEY set in the running process?">
-    Setting it in `~/.zshrc` doesn't help if your IDE or CI launched the process from a different env. Verify inside the process:
+Long-running services don't need this. `atexit` runs the shutdown for you.
 
-    ```python
-    import os
-    print(os.environ.get("BENTOLABS_API_KEY"))
-    ```
+### BENTOLABS_API_KEY isn't set in the running process
 
-    The key must start with `bl_pk_`. The SDK raises `BentoAuthError("invalid_api_key_format")` on construction otherwise.
-  </Accordion>
+Setting it in `~/.zshrc` doesn't help if your IDE or CI launched the process from a different env. Check it from inside the process:
 
-  <Accordion title="3. Is BENTOLABS_BASE_URL pointing at the wrong host?">
-    Defaults to `https://api.bentolabs.ai`. If you set this for local dev and forgot to unset it in production, your spans go nowhere.
+```python
+import os
+print(os.environ.get("BENTOLABS_API_KEY"))
+```
 
-    ```python
-    from bentolabs_sdk import resolve_options
-    print(resolve_options().base_url)
-    ```
-  </Accordion>
+The key must start with `bl_pk_`. Otherwise the SDK raises `BentoAuthError("invalid_api_key_format")` on construction.
 
-  <Accordion title="4. Is the daemon worker actually running?">
-    ```python
-    import threading, bentolabs_sdk.analytics as bento
-    bento.init()
-    print([t.name for t in threading.enumerate()])
-    # Should include: 'OtelBatchSpanRecordProcessor'
-    ```
+### BENTOLABS_BASE_URL points at the wrong host
 
-    If you don't see the worker thread, `init()` failed silently (suppressed exception in user code) or you're calling SDK functions before init resolved.
-  </Accordion>
+It defaults to `https://api.bentolabs.ai`. If you set it for local dev and forgot to unset it in production, your spans go nowhere. Print what the SDK resolved:
 
-  <Accordion title="5. Are spans being dropped?">
-    The queue holds 2048 spans. Past that, drops are logged at WARNING level:
+```python
+from bentolabs_sdk import resolve_options
+print(resolve_options().base_url)
+```
 
-    ```
-    Queue full, dropping span.
-    ```
+### The daemon worker isn't running
 
-    Enable Python logging to see it:
+List the threads after init and look for the worker:
 
-    ```python
-    import logging
-    logging.basicConfig(level=logging.WARNING)
-    ```
+```python
+import threading, bentolabs_sdk.analytics as bento
+bento.init()
+print([t.name for t in threading.enumerate()])
+# Should include: 'OtelBatchSpanRecordProcessor'
+```
 
-    If you're hitting this, you're emitting faster than network egress. Reduce volume or talk to us about higher-throughput tiers.
-  </Accordion>
-</AccordionGroup>
+If the worker thread isn't there, `init()` failed silently (a suppressed exception in your code) or you called SDK functions before init resolved.
+
+### Spans are being dropped
+
+The queue holds 2048 spans. Past that, drops are logged at WARNING level:
+
+```
+Queue full, dropping span.
+```
+
+Turn on Python logging to see it:
+
+```python
+import logging
+logging.basicConfig(level=logging.WARNING)
+```
+
+If you're hitting this, you're emitting faster than network egress. Reduce volume or talk to us about higher-throughput tiers.
 
 ## Fields look wrong in the dashboard
 
-<AccordionGroup>
-  <Accordion title="provider column is empty">
-    There is no auto-inference from model name. Pass `provider="anthropic"` (or `openai`, `google`, `aws_bedrock`, etc.) on every `track_ai` call. See [Attributes](/concepts/attributes).
-  </Accordion>
+The spans arrived, but a column is empty or a value lands in the wrong place. Match your symptom below.
 
-  <Accordion title="Conversations appear as N separate rows">
-    You're not passing `convo_id`. Add the same `convo_id` to every turn in a conversation, including assistant messages and tool calls.
-  </Accordion>
+### The provider column is empty
 
-  <Accordion title="User filter doesn't work">
-    Either `user_id` is missing, or you're passing it as a property (`properties={"user_id": ...}`). It must be the top-level `user_id=` kwarg so it lands on `gen_ai.user.id`.
-  </Accordion>
+Bento doesn't infer the provider from the model name. Pass `provider="anthropic"` (or `openai`, `google`, `aws_bedrock`, and so on) on every `track_ai` call. See [Attributes](/concepts/attributes).
 
-  <Accordion title="Bedrock model shows up under 'anthropic' instead of 'aws_bedrock'">
-    Bedrock model IDs (`anthropic.claude-3-sonnet-20240229-v1:0`) look like Anthropic to us but route through AWS. Pass `provider="aws_bedrock"` explicitly.
-  </Accordion>
+### A conversation appears as N separate rows
 
-  <Accordion title="Custom properties show as strings even when I passed ints">
-    Properties that are `int`, `float`, `bool`, or `str` keep their type. Dicts and mixed lists fall back to JSON-string. See [Properties → Type fidelity](/python/properties#type-fidelity).
-  </Accordion>
-</AccordionGroup>
+You're not passing `convo_id`. Add the same `convo_id` to every turn in the conversation, including assistant messages and tool calls.
+
+### The user filter doesn't work
+
+Either `user_id` is missing, or you're passing it as a property (`properties={"user_id": ...}`). It has to be the top-level `user_id=` kwarg so it lands on `gen_ai.user.id`.
+
+### A Bedrock model shows up under 'anthropic' instead of 'aws_bedrock'
+
+Bedrock model IDs like `anthropic.claude-3-sonnet-20240229-v1:0` look like Anthropic to us but route through AWS. Pass `provider="aws_bedrock"` explicitly.
+
+### Custom properties show as strings even though you passed ints
+
+Properties that are `int`, `float`, `bool`, or `str` keep their type. Dicts and mixed lists fall back to a JSON string. See [Properties → Type fidelity](/python/properties#type-fidelity).
 
 ## Spans nest weirdly
 
-<AccordionGroup>
-  <Accordion title="track_ai calls don't show as children of my begin() block">
-    Check task context. The trajectory's parent context lives in a `ContextVar`, which is per-thread for sync code and per-task for asyncio. Calling `track_ai` from a new thread or a `concurrent.futures` worker that didn't inherit your context will produce a root span.
+The spans show up, but the tree isn't what you expected. The three common shapes, and what's behind each:
 
-    See [threading model](/python/threading-model#async-and-context) for the full rules.
-  </Accordion>
+### track_ai calls don't show as children of your begin() block
 
-  <Accordion title="track_ai inside a FastAPI handler steals my framework span">
-    It doesn't. `track_ai` and `begin` both detach from the caller's OTel context on purpose, so your customer's FastAPI/Django instrumentation isn't pulled into our trace. If you want the Bento span to be a child of a parent OTel span, set its `traceparent` explicitly via the lower-level [OTel transport](/python/otel-transport).
-  </Accordion>
+Check your task context. The trajectory's parent context lives in a `ContextVar`, which is per-thread for sync code and per-task for asyncio. Calling `track_ai` from a new thread or a `concurrent.futures` worker that didn't inherit your context produces a root span instead. See the [threading model](/python/threading-model#async-and-context) for the full rules.
 
-  <Accordion title="finish() raises RuntimeError 'out of order'">
-    A nested `bento.begin()` is still open. Trajectories must be finished LIFO. Use `with bento.begin(...) as i:` to guarantee correct nesting; the context manager handles cleanup on exception too.
-  </Accordion>
-</AccordionGroup>
+### track_ai inside a FastAPI handler steals your framework span
+
+It doesn't. `track_ai` and `begin` both detach from the caller's OTel context on purpose, so your customer's FastAPI or Django instrumentation isn't pulled into our trace. To make the Bento span a child of a parent OTel span, set its `traceparent` explicitly through the lower-level [OTel transport](/python/otel-transport).
+
+### finish() raises RuntimeError 'out of order'
+
+A nested `bento.begin()` is still open. Trajectories must be finished LIFO. Use `with bento.begin(...) as i:` to guarantee correct nesting; the context manager handles cleanup on exception too.
 
 ## Local development
+
+Point the SDK at your local backend:
 
 ```python
 # Point at your local backend
@@ -123,7 +125,7 @@ bento.track_ai(event="local_test", input="hi", output="ok", user_id="me")
 bento.flush()
 ```
 
-Or via env vars:
+Or set it through env vars:
 
 ```bash
 export BENTOLABS_API_KEY="bl_pk_dev_..."

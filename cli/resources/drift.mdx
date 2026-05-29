@@ -1,0 +1,70 @@
+---
+title: "Drift"
+description: "Behavioral change versus a baseline, surfaced as drift events."
+icon: "wave-square"
+---
+
+Drift catches the case nothing else does: your agent didn't error, but it started behaving differently than it used to. Bento compares each run against a baseline of how that kind of run normally goes and records a drift event when something shifts. The `drift` group is where you read those events.
+
+A drift event is one detected difference between a run and its baseline, a run that looks unlike the ones that came before it. Each event names what shifted as a drift type, like a drop in tool success rate, an output length that moved off its usual range, or a changed tool-usage mix. Its severity is an integer where higher means a bigger departure, in practice `1` to `3`. Its verdict, `llm_verdict`, is `real`, `benign`, `need_more_data`, or `pending`, and the reasoning behind it sits in `llm_reason`. The `trajectory_id` points at the analyzed run that drifted, your way back to the evidence.
+
+<Warning>
+  These two commands take the workspace **differently**. `drift list-events` is workspace-scoped (uses `--workspace` or your saved default). But `drift get-event <id>` takes the workspace as a **required** query flag, `--workspace-id`. `--workspace` does not exist there, and the saved default is **not** applied.
+</Warning>
+
+## The commands
+
+```bash
+bentolabs drift --help
+```
+
+| Command | What it does |
+|---|---|
+| `drift list-events` | List drift events in a workspace. Filter by severity, verdict, and time. |
+| `drift get-event <drift-event-id>` | Open one event, with its `detail`, `baseline_value`, and `current_value`. |
+
+## Review drift
+
+Drift is read-only in the CLI. There's no ack/resolve lifecycle here; that's what [incidents](/cli/resources/incidents) are for.
+
+List recent drift, newest first. This shows only `real` events by default:
+
+```bash
+bentolabs drift list-events --output table
+```
+
+See everything, including unjudged events. `--show-unverified` drops the `real`-only filter:
+
+```bash
+bentolabs drift list-events --show-unverified --output table
+```
+
+Filter to one verdict (`real`, `benign`, `need_more_data`, `pending`), or narrow by severity and time:
+
+```bash
+bentolabs drift list-events --verdict need_more_data --output table
+```
+
+```bash
+bentolabs drift list-events --severity 3 --start-time 2026-05-01T00:00:00Z --end-time 2026-05-30T00:00:00Z
+```
+
+Open one event. Remember the split: `get-event` needs `--workspace-id`. The response adds `detail`, `baseline_value`, and `current_value`:
+
+```bash
+bentolabs drift get-event <drift-event-id> --workspace-id <ws-id>
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The analyzed run each drift event points at.
+  </Card>
+  <Card title="Incidents" icon="bell" href="/cli/resources/incidents">
+    Where a firing pattern gets an ack / assign / resolve lifecycle.
+  </Card>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors that fire across many runs.
+  </Card>
+</CardGroup>

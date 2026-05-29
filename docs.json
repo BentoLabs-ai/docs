@@ -29,11 +29,6 @@
             "pages": ["index", "quickstart", "otel-export"]
           },
           {
-            "group": "CLI",
-            "icon": "terminal",
-            "pages": ["cli/installation", "cli/commands"]
-          },
-          {
             "group": "Migrations",
             "icon": "right-left",
             "pages": ["migrations/langfuse", "migrations/raindrop"]
@@ -87,6 +82,39 @@
         "icon": "js",
         "tag": "Coming soon",
         "pages": ["typescript/index"]
+      },
+      {
+        "tab": "CLI",
+        "icon": "terminal",
+        "groups": [
+          {
+            "group": "Get started",
+            "icon": "rocket",
+            "pages": ["cli/overview", "cli/installation", "cli/commands"]
+          },
+          {
+            "group": "Resources",
+            "icon": "layer-group",
+            "pages": [
+              "cli/resources/issues",
+              "cli/resources/runs",
+              "cli/resources/trajectories",
+              "cli/resources/findings",
+              "cli/resources/signals",
+              "cli/resources/clusters",
+              "cli/resources/deep-search",
+              "cli/resources/drift",
+              "cli/resources/incidents",
+              "cli/resources/fingerprints",
+              "cli/resources/agent"
+            ]
+          },
+          {
+            "group": "Workspace & sources",
+            "icon": "gear",
+            "pages": ["cli/resources/sources", "cli/resources/settings"]
+          }
+        ]
       }
     ]
   },
@@ -163,7 +191,7 @@
     "socials": {
       "x": "https://x.com/bentolabsai",
       "github": "https://github.com/BentoLabs-ai",
-      "linkedin": "https://linkedin.com/company/bentolabs"
+      "linkedin": "https://www.linkedin.com/company/bentolabs-ai"
     },
     "links": [
       {

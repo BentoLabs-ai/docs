@@ -4,17 +4,9 @@ description: "The lower-level surface. Wire Bento into an existing OpenTelemetry
 icon: "cube"
 ---
 
-The analytics layer (`bentolabs_sdk.analytics`) sits on top of an OpenTelemetry `SpanProcessor`. If you already have an OTel pipeline configured for your app, you can wire the Bento exporter into it directly and skip the analytics layer entirely.
+The OTel transport is the `SpanProcessor` the analytics layer (`bentolabs_sdk.analytics`) sits on top of. Wire it into an OpenTelemetry pipeline directly when you already have one configured, and skip the analytics layer entirely.
 
-## When to use this
-
-Use the OTel transport directly when:
-
-- You already have a `TracerProvider` configured and don't want a second one.
-- You want to control batching, sampling, or resource attributes yourself.
-- You're using a framework (LangChain, LlamaIndex, OpenAI Agents SDK) that emits OTel spans and you just want to ship them.
-
-Use the [analytics layer](/python/track-ai) when you want the ergonomic `track_ai` / `begin` / decorator surface without managing OTel objects.
+This is the path when a `TracerProvider` is already in place and a second one isn't welcome, when batching, sampling, or resource attributes need to stay under your control, or when a framework like LangChain, LlamaIndex, or the OpenAI Agents SDK already emits OTel spans that need a destination. For the ergonomic `track_ai` / `begin` / decorator surface without managing OTel objects, use the [analytics layer](/python/track-ai) instead.
 
 ## Install
 
@@ -43,11 +35,11 @@ provider.force_flush()
 provider.shutdown()
 ```
 
-The processor batches spans with OpenTelemetry defaults and POSTs them to `${base_url}/v1/traces` with `Authorization: Bearer bl_pk_...`.
+`BentoLabsSpanProcessor` batches spans with OpenTelemetry defaults and POSTs them to `${base_url}/v1/traces` with `Authorization: Bearer bl_pk_...`.
 
 ## What ends up in the dashboard
 
-To get the same dashboard columns the analytics layer fills in, set these OTel attributes on your spans:
+These OTel attributes map to the same dashboard columns the analytics layer fills in. Set them on your spans:
 
 | OTel attribute | Lands in | Set via |
 |---|---|---|
@@ -62,9 +54,9 @@ To get the same dashboard columns the analytics layer fills in, set these OTel a
 
 See [Attributes](/concepts/attributes) for the full table.
 
-## Just the exporter
+## Wire the exporter directly
 
-If you want to wire a custom `SpanProcessor` (e.g. `SimpleSpanProcessor` for tests, or a `BatchSpanProcessor` with custom limits), use `BentoLabsTraceExporter` directly:
+To wire a custom `SpanProcessor` (a `SimpleSpanProcessor` for tests, or a `BatchSpanProcessor` with custom limits), use `BentoLabsTraceExporter` directly:
 
 ```python
 from opentelemetry.sdk.trace import TracerProvider

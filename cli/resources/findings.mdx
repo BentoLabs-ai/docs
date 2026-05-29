@@ -1,0 +1,81 @@
+---
+title: "Findings"
+description: "The observations Bento extracts from your runs, and how to pull them."
+icon: "magnifying-glass"
+---
+
+A finding is one thing Bento noticed in a [trajectory](/cli/resources/trajectories): a tool call failed, the agent looped, the response drifted off the goal. It's the smallest unit of analysis. One trajectory can carry many, and Bento groups matching findings across runs into the issues, clusters, and signals you triage everywhere else.
+
+Every finding has a kind, a short fixed label you filter on. There are 16 in total; a few of the real values:
+
+| Kind | What it flags |
+|---|---|
+| `tool_error` | A tool call returned an error. |
+| `hallucination` | The agent stated something unsupported. |
+| `loop_detected` | The agent repeated the same step. |
+| `wrong_tool_use` | The agent reached for the wrong tool. |
+| `goal_divergence` | The run drifted away from the user's goal. |
+| `safety_violation` | Output crossed a safety boundary. |
+| `prompt_injection` | Input tried to hijack the agent's instructions. |
+| `excessive_cost` | The run burned far more tokens or money than expected. |
+
+The same values feed the `--kind` flag on an issue's findings and the `--finding-kind` filter on the Runs list.
+
+## Commands
+
+A finding only exists in context, so there's no `findings` command group. You pull findings from an issue or from a trajectory, and you filter the Runs list by finding kind.
+
+```bash
+bentolabs issues list-findings --help        # findings attached to an issue
+bentolabs trajectories list-findings --help  # findings extracted from one run
+```
+
+| Command | What it does |
+|---|---|
+| `issues list-findings <issue-id>` | The observations attached to an issue. Filter by `--kind`. |
+| `trajectories list-findings <trajectory-id>` | Every finding extracted from one analyzed run. |
+| `traces list --finding-kind <kind>` | The Runs list, narrowed to runs with a finding of a given kind. |
+
+## Pull findings from an issue
+
+This is the common path: an issue bundles its findings as evidence. Read them all, newest analysis first:
+
+```bash
+bentolabs issues list-findings <issue-id> --output table
+```
+
+Narrow to one kind. `--kind` takes a single value and does not repeat:
+
+```bash
+bentolabs issues list-findings <issue-id> --kind tool_error
+```
+
+## Pull findings from a trajectory
+
+When you're on one analyzed run, list everything Bento extracted from it. This path returns all of a trajectory's findings with no kind filter; only the issue path takes `--kind`.
+
+```bash
+bentolabs trajectories list-findings <trajectory-id> --output table
+```
+
+## Find runs by finding kind
+
+To go the other way, start from a kind and find the runs that exhibit it by filtering the Runs list. `--finding-kind` repeats to match any of several, with OR semantics:
+
+```bash
+bentolabs traces list --finding-kind tool_error --finding-kind hallucination --output table
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    Where findings roll up: the tracked problems you triage.
+  </Card>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The analyzed runs findings are extracted from.
+  </Card>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors learned from matching findings.
+  </Card>
+</CardGroup>

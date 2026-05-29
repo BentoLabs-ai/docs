@@ -1,0 +1,82 @@
+---
+title: "Overview"
+description: "What the Bento CLI is, the product it drives, and how the pieces fit together."
+icon: "compass"
+---
+
+`bentolabs-cli` is the command-line client for Bento. Anything you can do in the dashboard, you can do from your terminal, a script, or CI: triage issues, read runs, inspect signals, pull analytics. This page explains the product the CLI drives, so any command lands in the right place.
+
+## The command list comes from the API
+
+Every command is generated from the Bento API. Each surface in the dashboard has a matching command group because both are built from the same source, and two things follow from that.
+
+`--help` at any level is the real, current signature, so reach for it whenever you're unsure:
+
+```bash
+bentolabs --help                 # all command groups
+bentolabs issues --help          # commands in a group
+bentolabs issues list --help     # one command's exact arguments
+```
+
+And the list grows when the API does. Run [`bentolabs refresh`](/cli/commands) to pull in newly added commands. You sign in as yourself with `bentolabs auth login`, not with a workspace API key, so the CLI can do whatever your dashboard login can.
+
+## What Bento records
+
+Bento watches your agent runs, learns what "broken" looks like for your app, and tracks the problems it finds. A handful of nouns carry the whole product, and they nest from the top down, the way you'd actually navigate.
+
+Start at an issue. An [issue](/cli/resources/issues) is a tracked problem: a recurring failure mode Bento has grouped for you, with a status, a severity, and its evidence attached. It's the front door, and most triage starts there.
+
+Under an issue sits that evidence. A [trajectory](/cli/resources/trajectories) is one analyzed agent run, the unit Bento reasons over and flags as suspicious, a win, or errored. Each trajectory carries [findings](/cli/resources/findings): single observations like "a tool call failed" or "the response drifted off the goal." The raw recording beneath a trajectory is a [run](/cli/resources/runs) (a trace, in OpenTelemetry terms), made of spans, the individual LLM and tool calls.
+
+Across many runs, Bento looks for patterns. A [signal](/cli/resources/signals) is a detector you describe in plain English; Bento trains it on your own runs, then fires it in real time and backfills your history. Similar findings and firings group into [clusters](/cli/resources/clusters), the scatter view of what's happening. A signal that keeps firing escalates to an [incident](/cli/resources/incidents), and when behavior shifts against a baseline, Bento records [drift](/cli/resources/drift).
+
+That nesting, at a glance:
+
+```text
+Issue                         the tracked problem (start here)
+├── Trajectories              the analyzed runs that exhibit it
+│   └── Findings              observations extracted from each run
+└── Signals (linked)          the detectors that tie it together
+    └── Clusters · Events     where each signal fires
+
+Run (trace)                   the raw recording a trajectory is built from
+└── Spans                     the individual steps (LLM and tool calls)
+```
+
+A run is the raw recording; a trajectory is that run after Bento analyzes it. You monitor trajectories and read runs when you need the raw payload.
+
+## How the dashboard maps to the CLI
+
+If someone mentions a page they saw in the web app, this is where it lives in the CLI.
+
+| Dashboard page | CLI group(s) | Resource page |
+|---|---|---|
+| Issues | `issues` | [Issues](/cli/resources/issues) |
+| Runs (raw trace list + charts) | `traces`, `analytics` | [Runs](/cli/resources/runs) |
+| Monitoring (trajectories, findings, clusters) | `trajectories`, `clusters` | [Trajectories](/cli/resources/trajectories) · [Clusters](/cli/resources/clusters) |
+| Signals | `signals` | [Signals](/cli/resources/signals) |
+| Deep Search | `deep-search` | [Deep Search](/cli/resources/deep-search) |
+| Drift | `drift` | [Drift](/cli/resources/drift) |
+| Alerts → Incidents | `incidents` | [Incidents](/cli/resources/incidents) |
+| Agent | `agent` | [Agent](/cli/resources/agent) |
+| Credentials / Settings → Integrations | `credentials`, `sync` | [Sources & sync](/cli/resources/sources) |
+| Settings → API keys / Members / Notifications | `api-keys`, `workspaces`, `notification-channels` | [Workspace settings](/cli/resources/settings) |
+
+A few platform actions stay in the dashboard. Binding a signal to a notification channel into a firing alert rule is one: the CLI trains the signal and creates the channel, but the binding happens in the web app. When no command fits, the [`raw`](/cli/commands) escape hatch can hit a path directly.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Install and sign in" icon="download" href="/cli/installation">
+    Get the CLI, sign in, pick a workspace.
+  </Card>
+  <Card title="Commands" icon="terminal" href="/cli/commands">
+    How arguments, request bodies, and output modes work.
+  </Card>
+  <Card title="Start with Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The front door for triage.
+  </Card>
+  <Card title="Python SDK" icon="python" href="/python/installation">
+    Send the runs the CLI reads.
+  </Card>
+</CardGroup>

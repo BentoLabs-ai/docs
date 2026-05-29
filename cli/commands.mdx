@@ -12,18 +12,13 @@ bentolabs traces --help              # list commands under "traces"
 bentolabs traces list --help         # see flags for one command
 ```
 
-If a command you expect is missing, run `bentolabs refresh` to pull the latest command list from the API.
+When a command you expect is missing, `bentolabs refresh` pulls a fresh command list from the API.
 
 ## How arguments work
 
-Each generated command has three kinds of input:
+A generated command takes three kinds of input: path params, query params, and a request body.
 
-| Source | How it maps |
-|---|---|
-| Path params like `/things/{thing_id}` | Required positional arguments, in the same order as the path. |
-| `workspace_id` in the path | Never a positional. The CLI fills it in from `--workspace` or the saved default. |
-| Query params | Keyword `--flags`. Types come from the API spec (string, int, float, bool, list). Repeat the flag to pass a list. |
-| Request body | `--data '<json>'`, `--data-file <path>`, or piped in from stdin. |
+Path params like `/things/{thing_id}` become required positional arguments, in the same order as the path. The `workspace_id` path param is the exception. It's never a positional; the CLI fills it from `--workspace` or the saved default. Query params become keyword `--flags`, with types drawn from the API spec (string, int, float, bool, list). Repeat the flag to pass a list. A request body arrives through `--data '<json>'`, `--data-file <path>`, or stdin.
 
 ```bash
 # Positional path param
@@ -42,7 +37,7 @@ bentolabs <group> <create> --data-file ./payload.json
 cat payload.json | bentolabs <group> <create>
 ```
 
-If no workspace is set, the CLI prints a hint pointing at `bentolabs workspaces list` and `bentolabs workspaces use <id>`.
+With no workspace set, the CLI prints a hint pointing at `bentolabs workspaces list` and `bentolabs workspaces use <id>`.
 
 ## Shared flags
 
@@ -66,7 +61,7 @@ Pretty-printed JSON is the default. Switch with `--output`:
 | `raw` | Plain JSON to stdout. Pipe into `jq`, `grep`, or a file. |
 | `table` | Renders a table for list endpoints. Falls back to pretty if the shape is not tabular. |
 
-Table mode also unwraps the common `{"items": [...], "next_cursor": ...}` shape for you, so list endpoints render directly.
+Table mode also unwraps the common `{"items": [...], "next_cursor": ...}` shape, so list endpoints render directly.
 
 ```bash
 bentolabs traces list --output table
@@ -87,7 +82,7 @@ bentolabs auth whoami         # show signed-in identity and current workspace
 bentolabs auth logout         # revoke the session and clear local tokens
 ```
 
-Tokens refresh automatically near expiry. If a refresh fails, for example because another process already rotated it, the next command returns a clean 401 and asks you to run `bentolabs auth login` again.
+Tokens refresh automatically near expiry. If a refresh fails, say because another process already rotated it, the next command returns a clean 401 and asks for `bentolabs auth login` again.
 
 ### `workspaces use`
 
@@ -102,7 +97,7 @@ The flag wins over the saved default when both are present.
 
 ### `raw`
 
-Send a raw request to any API path. Useful for endpoints the generated tree doesn't expose cleanly.
+Send a raw request to any API path, for endpoints the generated tree doesn't expose cleanly.
 
 ```bash
 bentolabs raw GET /health
@@ -110,11 +105,11 @@ bentolabs raw GET /v1/workspaces/<ws-id>/traces
 bentolabs raw POST /v1/workspaces/<ws-id>/some-endpoint --data '{"x":1}'
 ```
 
-`raw` uses the same auth and `--output` modes as generated commands. You fill in path params yourself, including `workspace_id`. The body comes from `--data` or `--data-file` only, not from stdin.
+`raw` uses the same auth and `--output` modes as generated commands. It passes path params through untouched, including `workspace_id`. The body comes from `--data` or `--data-file` only, not from stdin.
 
 ### `refresh`
 
-Pull a fresh copy of the command list from the API. Run this when a new endpoint is missing from `--help`.
+Pull a fresh copy of the command list from the API. Run this when an endpoint is missing from `--help`.
 
 ```bash
 bentolabs refresh
@@ -130,7 +125,7 @@ Inspect the active CLI configuration.
 bentolabs config show
 ```
 
-`config show` prints the current values and the path to the config file on disk. Tokens are written by `auth login`, and the default workspace by `workspaces use`. The config file is created with `0600` permissions.
+`config show` prints the current values and the path to the config file on disk. `auth login` writes the tokens, and `workspaces use` writes the default workspace. The config file is created with `0600` permissions.
 
 ### `version`
 
@@ -156,7 +151,7 @@ bentolabs traces list --output raw \
   | head -20
 ```
 
-Call a brand-new endpoint that isn't in your cached command tree yet:
+Call an endpoint that isn't in the cached command tree yet:
 
 ```bash
 bentolabs refresh

@@ -7,17 +7,21 @@ icon: "bolt"
 import InstallSdk from "/snippets/install-sdk.mdx";
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 
+Bento is analytics for what your AI app does in production. This page takes you from nothing to a live trace in the dashboard: install the SDK, send one trace, watch it land.
+
 ## Set up with an AI coding tool
 
-Install Bento's Agent Skills so your AI coding tool knows how to wire up the SDK. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
+Your AI coding tool can wire up the SDK for you. Install Bento's Agent Skills, then paste this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
 
 ```text wrap
 Set up Bento in this project. Run npx skills add BentoLabs-ai/skills, then use the bentolabs-integrate skill for a fresh start, or bentolabs-migrate if I'm coming from another SDK. Walk me through it step by step and confirm before editing.
 ```
 
-The skill carries the full playbook — discovering your framework, installing the SDK, wiring up `bento.instrument()` or `bento.track_ai`, and verifying the first trace lands.
+The skill carries the full playbook. It discovers your framework, installs the SDK, wires up `bento.instrument()` or `bento.track_ai`, and verifies the first trace lands.
 
 ### Other AI coding tools
+
+Each tool installs the skill the same way, then loads the docs over MCP. Pick yours:
 
 <Tabs>
   <Tab title="Claude Code">
@@ -77,6 +81,8 @@ The skill carries the full playbook — discovering your framework, installing t
 
 ## Or set it up manually
 
+Three steps get you from an API key to a trace in the dashboard.
+
 <Steps>
   <Step title="Get an API key">
     <ApiKeySetup />
@@ -95,9 +101,9 @@ The skill carries the full playbook — discovering your framework, installing t
   </Step>
 
   <Step title="Send your first trace">
-    Pick the one line of code that matches your stack.
+    Pick the snippet that matches your stack.
 
-    **Google ADK** — capture everything in one line:
+    **Google ADK.** Capture every call in one line:
 
     ```python
     import bentolabs_sdk as bento
@@ -109,7 +115,7 @@ The skill carries the full playbook — discovering your framework, installing t
     bento.flush()
     ```
 
-    **Anything else** (OpenAI, Anthropic, Bedrock, Vertex, …) — wrap each LLM call site:
+    **Anything else** (OpenAI, Anthropic, Bedrock, Vertex, …). Wrap each LLM call site:
 
     ```python
     import bentolabs_sdk.analytics as bento
@@ -126,9 +132,9 @@ The skill carries the full playbook — discovering your framework, installing t
     bento.flush()
     ```
 
-    **Already on a framework that speaks OpenTelemetry** (Vercel AI SDK, Mastra, LangChain, LlamaIndex, …)? Point its exporter at Bento instead — see [Export from any framework](/otel-export). In TypeScript this needs no Bento package at all.
+    **Already on a framework that speaks OpenTelemetry** (Vercel AI SDK, Mastra, LangChain, LlamaIndex, …)? Point its exporter at Bento instead. See [Export from any framework](/otel-export). In TypeScript this needs no Bento package at all.
 
-    Open [platform.bentolabs.ai](https://platform.bentolabs.ai) — the trace lands within seconds.
+    Open [platform.bentolabs.ai](https://platform.bentolabs.ai). The trace lands within seconds.
   </Step>
 </Steps>
 

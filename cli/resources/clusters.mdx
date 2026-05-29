@@ -1,0 +1,58 @@
+---
+title: "Clusters"
+description: "Groupings of similar findings and signal events, the scatter view."
+icon: "chart-scatter"
+---
+
+A cluster is a grouping of similar findings, observations Bento pulled from your runs and bundled because they look alike. In the dashboard they're the scatter view under Monitoring: each dot is a finding, and dots that sit close together form a cluster. The `clusters` group reads that view for the whole workspace.
+
+Where an [issue](/cli/resources/issues) is one tracked problem you work and close, a cluster is the looser, zoomed-out picture: the shapes in your monitoring data before anyone has named them. Each cluster in the workspace view carries a `label`, a `description`, a `member_count`, a `trend`, and a few `sample_quotes`. The view returns only active clusters, the ones worth looking at.
+
+Each member is a [Finding](/cli/resources/findings), extracted from a [Trajectory](/cli/resources/trajectories). A [Signal](/cli/resources/signals) is what turns a recurring cluster into a detector, and has its own clusters via `signals list-clusters <signal-id>`.
+
+## The commands
+
+```bash
+bentolabs clusters --help
+```
+
+| Command | What it does |
+|---|---|
+| `clusters get-workspace` | The workspace's active clusters. Label, member count, trend, sample quotes. |
+| `clusters get-scatter` | The raw scatter-plot data. Every finding as a point, plus a center per cluster. |
+
+Both are read-only and workspace-scoped. Neither takes query flags or a body; the only options are the shared `--workspace` and `--output`.
+
+## Read the scatter view
+
+See the clusters, with labels, counts, and a few quotes each:
+
+```bash
+bentolabs clusters get-workspace
+```
+
+Pull the names and sizes for an overview:
+
+```bash
+bentolabs clusters get-workspace --output raw | jq '.clusters[] | {label, member_count, trend}'
+```
+
+Get the plot points behind the picture. Each is a finding with its 2D coordinates, kind, severity, and quote; `centers` gives the labeled middle of each cluster. Unclustered points carry a null `cluster_id`:
+
+```bash
+bentolabs clusters get-scatter
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Signals" icon="signal" href="/cli/resources/signals">
+    The detectors a recurring cluster becomes.
+  </Card>
+  <Card title="Findings" icon="magnifying-glass" href="/cli/resources/findings">
+    The individual observations that make up each cluster.
+  </Card>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The analyzed runs those findings come from.
+  </Card>
+</CardGroup>

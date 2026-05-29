@@ -6,18 +6,11 @@ icon: "route"
 
 A **trajectory** is one run of your agent: from the user's prompt to your final response, with every model call, tool call, retry, and planning step in between grouped together. In the dashboard, a trajectory is one row. Click into it and you see the full step-by-step.
 
-You open one with `bento.begin(...)` or `@bento.interaction`. Every `track_ai` and `tool_span` call made while it is open joins that trajectory.
+You open one with `bento.begin(...)` or `@bento.interaction`. Every `track_ai` and `tool_span` call made while it's open joins that trajectory.
 
 ## When to use what
 
-| Use this              | When                                              |
-|-----------------------|---------------------------------------------------|
-| `bento.track_ai(...)` | One LLM call. No surrounding agent loop.          |
-| `bento.begin(...)`    | A multi-step agent run. You want every step grouped under one row in the dashboard. |
-
-<Note>
-  If you only make one model call per request, you don't need `begin`. A bare `track_ai` is already a one-span trajectory.
-</Note>
+Reach for `bento.begin(...)` when you have a multi-step agent run and want every step grouped under one row in the dashboard. When you make a single LLM call with no surrounding agent loop, `bento.track_ai(...)` is enough on its own. You don't need `begin` for that case, because a bare `track_ai` is already a one-span trajectory.
 
 ## Opening a trajectory
 
@@ -54,7 +47,7 @@ You open one with `bento.begin(...)` or `@bento.interaction`. Every `track_ai` a
         t.finish(output=final)
     ```
 
-    Use only when control flow can't fit a `with` block. You are responsible for cleanup on exception.
+    Use only when control flow can't fit a `with` block. You're responsible for cleanup on exception.
   </Tab>
 </Tabs>
 
@@ -84,23 +77,11 @@ with bento.begin(event="agent_loop", user_id="u1") as t:
 
 ## Lifecycle rules
 
-<AccordionGroup>
-  <Accordion title="LIFO finish order">
-    Nested trajectories must be finished in reverse order. The context manager handles this for you. Out-of-order `finish()` raises `RuntimeError`.
-  </Accordion>
-
-  <Accordion title="Idempotent finish">
-    Calling `finish()` twice on the same trajectory is a no-op the second time.
-  </Accordion>
-
-  <Accordion title="Detached parent">
-    Both `begin` and `track_ai` detach from any outer OTel context. Customer FastAPI or Django spans will not become parents of Bento spans by accident.
-  </Accordion>
-</AccordionGroup>
+Nested trajectories finish in reverse order. The context manager handles this for you; an out-of-order `finish()` raises `RuntimeError`. Calling `finish()` twice on the same trajectory is a no-op the second time. Both `begin` and `track_ai` detach from any outer OTel context, so customer FastAPI or Django spans won't become parents of Bento spans by accident.
 
 ## Span kinds inside a trajectory
 
-A trajectory contains spans of any kind. The two emitted directly by the SDK:
+A trajectory contains spans of any kind. The two the SDK emits directly:
 
 - **LLM call** _(default kind)_: `bento.track_ai(...)`. Carries `gen_ai.*` attributes.
 - **Tool call**: `bento.tool_span(...)`, `interaction.tool_span(...)`, or `@bento.tool`. Carries `openinference.span.kind="tool"`.

@@ -6,6 +6,8 @@ icon: "download"
 
 import ApiKeySetup from "/snippets/api-key-setup.mdx";
 
+The Bento Python SDK sends analytics about your AI agent runs to Bento, where you can see what your app does in production and improve what fails.
+
 ## Set up with an AI coding tool
 
 Install Bento's Agent Skills so your AI coding tool knows how to wire up the SDK. Copy this prompt into Claude Code, Cursor, Codex, OpenCode, or Windsurf:
@@ -14,7 +16,7 @@ Install Bento's Agent Skills so your AI coding tool knows how to wire up the SDK
 Set up Bento in this project. Run npx skills add BentoLabs-ai/skills, then use the bentolabs-integrate skill for a fresh start, or bentolabs-migrate if I'm coming from another SDK. Walk me through it step by step and confirm before editing.
 ```
 
-The skill carries the full playbook — discovering your framework, installing the SDK, wiring up `bento.instrument()` or `bento.track_ai`, and verifying the first trace lands. Prefer to do it by hand? The rest of this page walks the same steps manually.
+The skill carries the full playbook: discovering your framework, installing the SDK, wiring up `bento.instrument()` or `bento.track_ai`, and verifying the first trace lands. Prefer to do it by hand? The rest of this page walks the same steps manually.
 
 ## Requirements
 
@@ -38,9 +40,7 @@ The base wheel ships its own OpenTelemetry dependencies. You don't need to insta
 
 <ApiKeySetup />
 
-<Tip>
-  In production, set the key via environment variable. For local development or notebooks, pass it in code: `bento.init(api_key="bl_pk_...")`.
-</Tip>
+In production, set the key via environment variable. For local development or notebooks, pass it in code: `bento.init(api_key="bl_pk_...")`.
 
 ## Send a test trace
 

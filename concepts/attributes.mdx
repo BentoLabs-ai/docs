@@ -4,11 +4,11 @@ description: "The dimensions every chart can filter, group, and break down by."
 icon: "table"
 ---
 
-Attributes are how you slice everything in the dashboard: filter by user, break down spend by model, segment by your own experiment ID. Some are built into the SDK (`user_id`, `model`, `convo_id`); the rest you define yourself with `properties={...}`.
-
-If you skip a kwarg, the dashboard column behind it stays empty for that call.
+Attributes are how you slice everything in the dashboard: filter by user, break down spend by model, segment by your own experiment ID. Some are built into the SDK (`user_id`, `model`, `convo_id`); the rest you define yourself with `properties={...}`. Skip a kwarg and the dashboard column behind it stays empty for that call.
 
 ## The built-in fields
+
+Each built-in kwarg maps to one OTel attribute and one dashboard column.
 
 | Kwarg              | OTel attribute              | Column           | Skip it and... |
 |--------------------|-----------------------------|------------------|----------------|
@@ -21,33 +21,21 @@ If you skip a kwarg, the dashboard column behind it stays empty for that call.
 | `output`           | `output.value`              | Output           | Empty output column |
 | `properties={...}` | each key, as-is             | Attributes JSON  | No custom dimensions |
 
-<Tip>
-  The mapping is the same for `track_ai`, `begin`, `interaction.update`, `interaction.finish`, and `tool_span`. Unpassed kwargs are omitted from the span, not set to null.
-</Tip>
+The mapping is the same for `track_ai`, `begin`, `interaction.update`, `interaction.finish`, and `tool_span`. Unpassed kwargs are omitted from the span, not set to null.
 
-## Why each one matters
+A few of these fields earn extra attention:
 
-<AccordionGroup>
-  <Accordion title="provider has no auto-inference">
-    A model name like `claude-3-5-sonnet` is not auto-tagged as Anthropic. Bedrock model IDs (`anthropic.claude-3-...`) are ambiguous on purpose. Pass `provider=` explicitly: `"openai"`, `"anthropic"`, `"google"`, `"aws_bedrock"`, etc.
-  </Accordion>
+`provider` has no auto-inference. A model name like `claude-3-5-sonnet` isn't auto-tagged as Anthropic, and Bedrock model IDs (`anthropic.claude-3-...`) are ambiguous on purpose. Pass `provider=` explicitly: `"openai"`, `"anthropic"`, `"google"`, `"aws_bedrock"`, etc. Bedrock routes through AWS, so a Bedrock call wants `provider="aws_bedrock"`, not `"anthropic"`.
 
-  <Accordion title="convo_id is the only way to group turns">
-    Without `convo_id`, multi-turn conversations look like N independent requests. See [Sessions and users](/concepts/sessions).
-  </Accordion>
+`convo_id` is the only way to group turns. Without it, multi-turn conversations look like N independent requests. See [Sessions and users](/concepts/sessions).
 
-  <Accordion title="user_id is required for user filtering">
-    Required to filter the trace list by user. We do not store profile data (no email, no name, no traits). `user_id` is a pass-through string only.
-  </Accordion>
+`user_id` drives user filtering. It's required to filter the trace list by user, and it's a pass-through string only. Bento doesn't store profile data: no email, no name, no traits.
 
-  <Accordion title="model is required for the cost view">
-    The cost view and per-model breakdowns key off `gen_ai.request.model`. Without it, spend rolls up under "Unknown".
-  </Accordion>
-</AccordionGroup>
+`model` feeds the cost view. The cost view and per-model breakdowns key off `gen_ai.request.model`. Without it, spend rolls up under "Unknown".
 
 ## Custom attributes via `properties`
 
-Use `properties` for anything you want to filter or aggregate on that isn't covered above.
+`properties` covers anything you want to filter or aggregate on that the built-in fields don't.
 
 ```python
 bento.track_ai(
@@ -130,22 +118,4 @@ The OTel JSON for a `track_ai` call with `properties={"experiment_id": 17}`:
 
 The same attributes show up in any OTel backend you wire this into. Nothing about your code is Bento-specific.
 
-## Common mistakes
-
-<Steps>
-  <Step title="Forgetting provider">
-    Half your dashboard filters go unused. Pass it on every call.
-  </Step>
-  <Step title="Forgetting convo_id">
-    Conversations fragment into single-turn rows.
-  </Step>
-  <Step title="Putting gen_ai.* keys in properties">
-    SDK kwargs overwrite them after properties are applied.
-  </Step>
-  <Step title="Bedrock model IDs with provider=anthropic">
-    Bedrock routes through AWS. Use `provider="aws_bedrock"`.
-  </Step>
-  <Step title="No flush() in short scripts">
-    The exporter batches. Call `bento.flush()` (or `bento.shutdown()`) before a short-lived process exits.
-  </Step>
-</Steps>
+The exporter batches spans, so a short-lived process can exit before they ship. Call `bento.flush()` (or `bento.shutdown()`) before the process ends.

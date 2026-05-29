@@ -1,0 +1,81 @@
+---
+title: "Fingerprints"
+description: "Structural signatures of a run, used to find and diff near-identical runs."
+icon: "fingerprint"
+---
+
+A fingerprint is the structural signature of a run, a hash of the setup that produced it. Bento computes one for every run, so you can answer two questions fast: how many runs look structurally like this one, and what changed between these two? Fingerprints surface inside run detail, and the `fingerprints` group lets you pull, compare, and recompute them.
+
+## What a fingerprint is
+
+A fingerprint captures the **shape of the agent configuration** behind a run, not the conversation. Two runs with the same fingerprint share the same model, tools, and deployment, and the same (or near-identical) prompt. When the fingerprint differs, a `diff` tells you which of those four pieces changed.
+
+The hash is built from four components: **prompt** (system/developer instructions), **model** (and its settings), **tools** (what the agent could call), and **deployment** (where it ran). Each fingerprint also carries a `fingerprint_hash`, the signature itself, where identical hashes mean structurally identical setups. Its `confidence` is `exact` or `partial`, depending on whether Bento captured enough to be sure. The `trace_count` is how many runs share the fingerprint, and `first_seen_at` and `last_seen_at` mark when this configuration first and most recently produced a run.
+
+A detailed fingerprint (`get`, `get-trace`) also returns `material` (the extracted configuration) and `evidence` (what Bento read to derive it).
+
+## The commands
+
+```bash
+bentolabs fingerprints --help
+```
+
+| Command | What it does |
+|---|---|
+| `fingerprints list` | List fingerprints in the workspace, most recently seen first. |
+| `fingerprints get <fingerprint-id>` | One fingerprint, with its `material` and `evidence`. |
+| `fingerprints get-trace <trace-id>` | The fingerprint for a specific run, plus its `trace_count`. |
+| `fingerprints diff <left-id> <right-id>` | Compare two fingerprints: which components changed, and how. |
+| `fingerprints recompute-trace <trace-id>` | Re-derive a run's fingerprint from the latest data. |
+
+<Note>
+  Only `list` is workspace-scoped (`--limit`). `get`, `get-trace`, `diff`, and `recompute-trace` address things by id, just the positional id(s), no `--workspace`.
+</Note>
+
+## Find and compare runs
+
+Get the fingerprint for a run. The response carries its `trace_count`, how many runs share this exact setup:
+
+```bash
+bentolabs fingerprints get-trace <trace-id>
+```
+
+Browse the workspace's fingerprints (default 50, max 200):
+
+```bash
+bentolabs fingerprints list --limit 50 --output table
+```
+
+Open one to read its full `material` and `evidence`:
+
+```bash
+bentolabs fingerprints get <fingerprint-id>
+```
+
+Diff two fingerprints. The response carries `changed_components` plus per-component diffs for `prompt`, `model`, `tools`, and `deployment`:
+
+```bash
+bentolabs fingerprints diff <left-id> <right-id>
+```
+
+## Recompute a fingerprint
+
+If a run's underlying data changed, re-derive its fingerprint. This is a POST with no body. The `created` boolean in the response says whether it minted a new fingerprint or matched an existing one:
+
+```bash
+bentolabs fingerprints recompute-trace <trace-id>
+```
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Runs" icon="list-tree" href="/cli/resources/runs">
+    The imported runs a fingerprint is computed from.
+  </Card>
+  <Card title="Trajectories" icon="route" href="/cli/resources/trajectories">
+    The assembled, analyzed view of a run.
+  </Card>
+  <Card title="Clusters" icon="chart-scatter" href="/cli/resources/clusters">
+    Groupings of similar findings across runs.
+  </Card>
+</CardGroup>

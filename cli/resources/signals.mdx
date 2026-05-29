@@ -1,0 +1,108 @@
+---
+title: "Signals"
+description: "Detectors you describe in plain English: list them, read what they fire on, train new ones."
+icon: "signal"
+---
+
+A signal is a detector. It watches agent runs and fires when findings match a pattern described in plain English: "the agent retries a failed charge with no backoff," "the assistant goes off-topic." When a signal keeps firing it escalates to an [incident](/cli/resources/incidents). These live under **Signals** in the dashboard.
+
+A signal is a learned classifier, not a hand-written rule. Bento trains it on your own runs through the [Deep Search](/cli/resources/deep-search) loop, and once trained it fires in real time on new runs and backfills history. Each firing is an event, and Bento groups similar events into clusters.
+
+Every signal carries a source and a status:
+
+| Field | Values |
+|---|---|
+| **Source** | `auto`, `classifier`, `instrumented`, `monitored`, `self_diagnostic`, `tool_error`, `metric`, `deep_search` |
+| **Status** | `initializing` (training), `active` (live), `paused`, `archived`, `failed` |
+
+## Commands
+
+```bash
+bentolabs signals --help
+```
+
+| Command | What it does |
+|---|---|
+| `signals list` | List signals. Filter by source, status, or group. |
+| `signals get <signal-id>` | Open one signal with its full config and `event_count`. |
+| `signals list-events <signal-id>` | The firings, what the signal matched on. |
+| `signals list-clusters <signal-id>` | Groupings of similar events for that signal. |
+| `signals create` | Register a signal record by hand. |
+| `signals update <signal-id>` | Edit a signal's name, prompt, or config. |
+| `signals delete <signal-id>` | Archive a signal (soft delete). |
+
+## Read what's firing
+
+List the signals:
+
+```bash
+bentolabs signals list --output table
+```
+
+Filter to the live ones. `--status` takes `initializing`, `active`, `paused`, `archived`, or `failed`:
+
+```bash
+bentolabs signals list --status active --output table
+```
+
+Filter by how a detector was made. `--source` takes any of the source values above:
+
+```bash
+bentolabs signals list --source deep_search --output table
+```
+
+Open one signal. The response carries its prompt, config, and `event_count`:
+
+```bash
+bentolabs signals get <signal-id>
+```
+
+Read the events, the firings. This defaults to the last 30 days; widen it with `--start-time`:
+
+```bash
+bentolabs signals list-events <signal-id> --start-time 2026-01-01T00:00:00Z --output table
+```
+
+See the clusters, similar events grouped:
+
+```bash
+bentolabs signals list-clusters <signal-id>
+```
+
+## Create and edit
+
+The [Deep Search](/cli/resources/deep-search) loop trains a working detector. To register a record directly, `signals create` takes a body where `name` is required and `prompt` describes the pattern in plain English. A hand-created record lands in `initializing` and waits for its training step; it doesn't train a classifier on its own.
+
+```bash
+bentolabs signals create --data '{"name": "Payment retry storm", "prompt": "Agent retries a failed charge with no backoff until timeout."}'
+```
+
+To edit a signal, send only the fields that change:
+
+```bash
+bentolabs signals update <signal-id> --data '{"prompt": "Agent retries a failed charge more than 3 times with no backoff."}'
+```
+
+`signals delete` is a soft delete. The record stays, the status flips to `archived`, and it stops firing:
+
+```bash
+bentolabs signals delete <signal-id>
+```
+
+<Warning>
+  The CLI can train a signal and create a notification channel, but **binding a signal to a channel into a firing alert rule is dashboard-only.** There's no `alert-rules` group, so set the rule up in the dashboard.
+</Warning>
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Deep Search" icon="binoculars" href="/cli/resources/deep-search">
+    The labeling loop that trains a signal from your own runs.
+  </Card>
+  <Card title="Clusters" icon="chart-scatter" href="/cli/resources/clusters">
+    Groupings of similar findings and signal events.
+  </Card>
+  <Card title="Incidents" icon="bell" href="/cli/resources/incidents">
+    What a repeatedly-firing signal escalates to.
+  </Card>
+</CardGroup>

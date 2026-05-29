@@ -4,9 +4,11 @@ description: "Production infrastructure for AI agents. Monitor what runs. Improv
 icon: "compass"
 ---
 
+Bento watches your AI agents in production, learns what "broken" looks like for your app, and tracks the problems it finds so you can fix them.
+
 ## Set up with an AI coding tool
 
-The fastest way in. Paste this into Claude Code, Cursor, Codex, OpenCode, or Windsurf — it installs Bento's Agent Skills and hands the agent the full integration playbook:
+The fastest way in. Paste this into Claude Code, Cursor, Codex, OpenCode, or Windsurf. It installs Bento's Agent Skills and hands the agent the full integration playbook:
 
 ```text wrap
 Set up Bento in this project. Run npx skills add BentoLabs-ai/skills, then use the bentolabs-integrate skill for a fresh start, or bentolabs-migrate if I'm coming from another SDK. Walk me through it step by step and confirm before editing.
@@ -22,16 +24,16 @@ For per-tool MCP setup, see the [quickstart](/quickstart).
 
 <CardGroup cols={2}>
   <Card title="Traces" icon="list-tree">
-    Every span from every framework, captured via OpenTelemetry. Jump into the span tree or follow a signal straight to the call that broke.
+    Every span from every framework, captured over OpenTelemetry. Open the span tree, or follow a signal straight to the call that broke.
   </Card>
   <Card title="Signals" icon="signal">
     Describe a failure mode in plain English. Bento trains a detector on your own traces, fires it in real time, and backfills your history.
   </Card>
-  <Card title="Alerts" icon="bell">
-    Write alerts in English. Bento groups fires into incidents and judges each one real or benign — so you only wake up for real drift.
+  <Card title="Issues" icon="circle-exclamation">
+    Bento groups recurring failures into tracked issues, the front door for triage, with status, severity, and the runs behind each one.
   </Card>
-  <Card title="Evaluations & versions" icon="rotate">
-    Close the loop. Promote good behavior, regression-test new versions on captured traces, ship the next version with confidence.
+  <Card title="Clusters" icon="chart-scatter">
+    See what your agent is doing at a glance. Similar findings group into clusters, so patterns surface before you go looking.
   </Card>
 </CardGroup>
 
@@ -53,14 +55,14 @@ For per-tool MCP setup, see the [quickstart](/quickstart).
     `pip install bentolabs-sdk`. Google ADK integration, plus manual tracking for everything else.
   </Card>
   <Card title="TypeScript" icon="js" href="/typescript">
-    In active development. Node and browser support coming soon.
+    Python is the supported SDK. Track the TypeScript SDK here.
   </Card>
 </CardGroup>
 
 ## From the terminal
 
 <CardGroup cols={2}>
-  <Card title="CLI" icon="terminal" href="/cli/installation">
-    `uv tool install bentolabs-cli`. Hit any API endpoint — list traces, inspect signals, drive analytics — from your shell or CI.
+  <Card title="CLI" icon="terminal" href="/cli/overview">
+    `uv tool install bentolabs-cli`. Triage issues, inspect signals, drive analytics. Every dashboard surface, from your shell or CI.
   </Card>
 </CardGroup>

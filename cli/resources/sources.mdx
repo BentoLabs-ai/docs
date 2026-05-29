@@ -1,0 +1,122 @@
+---
+title: "Sources & sync"
+description: "Connect external trace sources like Langfuse and check import health."
+icon: "plug"
+---
+
+A credential is a stored connection to one external trace source, like a [Langfuse](https://langfuse.com) project. You give Bento the keys to read from it, and a background scheduler pulls runs in on a schedule you control. The `credentials` group holds those connections; the `sync` group watches the import that pulls runs in. Runs can also arrive without a credential, by pushing OTLP directly with a workspace API key; that path lives on the [Workspace settings](/cli/resources/settings) page.
+
+A credential carries three things. Its source type is `langfuse` (the example throughout this page). Its config is the connection details: for Langfuse, `public_key`, `secret_key`, and `base_url`. Its health is `last_health_status`, which reads `ok` or `fail`, and transiently `unknown` before the first probe.
+
+The `sync` side reports on the import. Workspace settings hold the schedule: `schedule_enabled`, `frequency_minutes`, `next_run_at`, and `max_traces_per_sync`. Status is one credential's live import state: `idle`, `running`, `ok`, `fail`, or `partial`. Reports record what each completed run created, updated, skipped, or failed. A doctor diagnoses health across credentials.
+
+## Commands
+
+```bash
+bentolabs credentials --help   # stored source connections
+bentolabs sync --help          # import schedule, status, reports, doctor
+```
+
+| Command | What it does |
+|---|---|
+| `credentials list` | List the workspace's stored source connections. |
+| `credentials get <credential-id>` | Open one credential: `last_health_status` and a redacted config. |
+| `credentials create` | Connect a new source. Runs a health check synchronously. |
+| `credentials update <credential-id>` | Rewrite a credential's config (e.g. rotate keys). Re-runs the health check. |
+| `credentials delete <credential-id>` | Remove a stored connection. |
+| `credentials run-health-check <credential-id>` | Probe the source on demand and record the result. |
+| `sync get-workspace-settings` | Read the import schedule for the workspace. |
+| `sync update-workspace-settings` | Change the schedule (frequency, enable/disable, next run). |
+| `sync status <credential-id>` | The live import state for one credential. |
+| `sync list-workspace-reports` | The recent completed import runs. |
+| `sync get-doctor` | Diagnose import health across credentials, including upstream reachability. |
+
+<Note>
+  **Where the workspace comes from.** `credentials list` / `create` and every `sync` command that targets the workspace use `--workspace` or your saved default. The id-path commands (`credentials get` / `update` / `delete` / `run-health-check` and `sync status`) take a `credential_id` positionally and are **not** workspace-scoped.
+</Note>
+
+## Connect a source
+
+Connect a Langfuse source by passing `source_type` and a `config` with the source's keys. The create runs a health check synchronously, so the response already carries `last_health_status`:
+
+```bash
+bentolabs credentials create --data '{"source_type": "langfuse", "config": {"public_key": "pk-lf-...", "secret_key": "sk-lf-...", "base_url": "https://us.cloud.langfuse.com"}}'
+```
+
+List what's connected, or open one to read its health and redacted config:
+
+```bash
+bentolabs credentials list --output table
+```
+
+```bash
+bentolabs credentials get <credential-id>
+```
+
+Recheck the connection on demand without changing anything:
+
+```bash
+bentolabs credentials run-health-check <credential-id>
+```
+
+Rotate the keys by rewriting the full config. This is a replace, and it re-runs the health check:
+
+```bash
+bentolabs credentials update <credential-id> --data '{"config": {"public_key": "pk-lf-...", "secret_key": "sk-lf-NEW", "base_url": "https://us.cloud.langfuse.com"}}'
+```
+
+Disconnect a source when you're done with it:
+
+```bash
+bentolabs credentials delete <credential-id>
+```
+
+## Watch the import
+
+Connecting a source schedules the first pull immediately. From there, `sync` is how you watch and tune it.
+
+Read the schedule:
+
+```bash
+bentolabs sync get-workspace-settings
+```
+
+Tune it by PATCHing only the fields you want. `frequency_minutes` accepts 15–10080; `max_traces_per_sync` accepts 5000–10000:
+
+```bash
+bentolabs sync update-workspace-settings --data '{"schedule_enabled": true, "frequency_minutes": 60}'
+```
+
+Check the live state of one credential's import, or read the recent runs:
+
+```bash
+bentolabs sync status <credential-id>
+```
+
+```bash
+bentolabs sync list-workspace-reports --limit 10
+```
+
+Diagnose problems across every credential, including upstream reachability:
+
+```bash
+bentolabs sync get-doctor --from-date 2026-05-01 --to-date 2026-05-30
+```
+
+<Note>
+  There's no "sync now" or "stop sync" command. The import runs on the schedule you set with `update-workspace-settings`; `run-health-check` is the only on-demand action, and it probes the connection rather than triggering a pull.
+</Note>
+
+## See also
+
+<CardGroup cols={2}>
+  <Card title="Runs" icon="list-tree" href="/cli/resources/runs">
+    The raw runs an import brings in.
+  </Card>
+  <Card title="Workspace settings" icon="gear" href="/cli/resources/settings">
+    Push runs with an API key instead of importing them.
+  </Card>
+  <Card title="Issues" icon="circle-exclamation" href="/cli/resources/issues">
+    The tracked problems Bento finds in those runs.
+  </Card>
+</CardGroup>
